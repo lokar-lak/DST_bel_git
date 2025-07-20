@@ -23,7 +23,7 @@ mods.BielarusizatarDST = {
 	mod_announce = {},
 	
 	debug = nil,
-	print = function(...) if mods.BielarusizatarDST.debug then print("[RLP_DEBUG]", ...)  end end,
+	print = function(...) if mods.BielarusizatarDST.debug then print("[BLR_DEBUG]", ...)  end end,
 	
 	UpdateLogFileName = "updatelog.txt",
 	MainPOfilename = "DST.po",
@@ -55,4 +55,4 @@ mods.BielarusizatarDST = {
 
 print("About to load BielarusizatarDST ver. ", modinfo.version)
 
-modimport("scripts/rlp_main.lua")
+modimport("scripts/blr_main.lua")

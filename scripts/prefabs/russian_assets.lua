@@ -6,14 +6,13 @@ local assets =
 {	
 	Asset("ATLAS","images/text_bg.xml"),
 	
-	Asset("ATLAS","images/inf_btn.xml"),
 }
 
 	table.insert(assets, Asset("ATLAS", "images/blr_icon"..(t.IsBeta and "_beta.xml" or ".xml")))
 
 if t.CurrentTranslationType == t.TranslationTypes.Full then --Всё остальное
 	local ass = {
-		Asset("ATLAS","images/rus_mapgen.xml"), --Русифицированные пиктограммы в окне генерирования нового мира
+		Asset("ATLAS","images/blr_mapgen.xml"), --Русифицированные пиктограммы в окне генерирования нового мира
 		--Серый
 		Asset("ATLAS","images/blr_names_wickerbottom.xml"), 
 		Asset("ATLAS","images/blr_names_willow.xml"), 
@@ -57,8 +56,6 @@ if t.CurrentTranslationType == t.TranslationTypes.Full then --Всё остал�
 		Asset("ATLAS","images/blr_names_gold_wurt.xml"),
 		Asset("ATLAS","images/blr_names_gold_walter.xml"),
 		
-		
-		Asset("ATLAS", "images/frontscreen_ru.xml" ),
 		Asset("ATLAS", "images/tradescreen_overflow_ru.xml" ),
 		Asset("ATLAS", "images/blr_tradescreen.xml" ),		
 	}
