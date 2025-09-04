@@ -1,5 +1,5 @@
 name = "Bielarusizatar DST"
-version = "0.0.5"
+version = "0.0.7"
 
 local desc = {
 	en = "\nFull translation for Don't Starve Together in Belarusan by łokar Team.\n\nVersion: "..version,

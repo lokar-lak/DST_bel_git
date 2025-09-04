@@ -21,7 +21,7 @@ end
 
 --Сохраняет в файле fn все имена с действием, указанным в параметре action)
 function debugnames(name, mode)
-    local filename = t.StorePath..(name or "rlp_names")..".txt"
+    local filename = t.StorePath..(name or "blr_names")..".txt"
     local str1,str2
     local names={}
     local f=assert(io.open(filename, "w"))

@@ -34,7 +34,7 @@ mods.BielarusizatarDST = {
 	IsModTranslEnabled = nil,
 	SteamID = SteamID,
 	SteamURL = "http://steamcommunity.com/sharedfiles/filedetails/?id="..SteamID,
-	DiscordURL = "https://discord.gg/eHEgH3xSF8",
+	DiscordURL = "",
 	SelectedLanguage = "by",
 
 	--Скланенне

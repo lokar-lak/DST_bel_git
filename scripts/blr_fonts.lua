@@ -43,7 +43,7 @@ local LOCALIZED = {["talkingfont"] = true,
 	["belisaplumilla100"] = true,
 	["buttonfont"] = true,
 	["hammerhead50"] = true,
-	["bellefair50_laite"] = true,
+	["bellefair50"] = true,
 	["bellefair_outline50"] = true,
 	["talkingfont_wormwood"] = true,
 	--["controllers"] = true,
@@ -96,7 +96,7 @@ local function ApplyLocalizedFonts()
 	end
 
 	--Create a prefab, register it and load it
-	local LocalizedFontsPrefab = require("prefabs/rlp_fonts")(LocalizedFontAssets)
+	local LocalizedFontsPrefab = require("prefabs/blr_fonts")(LocalizedFontAssets)
 	RegisterPrefabs(LocalizedFontsPrefab)
 	TheSim:LoadPrefabs({"BLR_fonts"})
 
@@ -125,7 +125,7 @@ local function ApplyLocalizedFonts()
 	UIFONT           = FONT_PREFIX.."belisaplumilla50"
 	BUTTONFONT       = FONT_PREFIX.."buttonfont"
 	HEADERFONT       = FONT_PREFIX.."hammerhead50"
-	CHATFONT         = FONT_PREFIX.."bellefair50_laite"
+	CHATFONT         = FONT_PREFIX.."bellefair50"
 	CHATFONT_OUTLINE = FONT_PREFIX.."bellefair_outline50"
 	NUMBERFONT       = FONT_PREFIX.."stint-ucr50"
 	TALKINGFONT      = FONT_PREFIX.."talkingfont"
