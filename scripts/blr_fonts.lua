@@ -25,9 +25,9 @@ local CACHED_FONTS = {
 	BODYTEXTFONT     = BODYTEXTFONT,
 	--CONTROLLERS      = "fonts/controllers"..FONT_POSTFIX..".zip", alias = CONTROLLERS, disable_color = true,
 
-	TALKINGFONT_HERMIT   = TALKINGFONT,
+	TALKINGFONT_TRADEIN = TALKINGFONT_WORMWOOD,
 	TALKINGFONT_WORMWOOD = TALKINGFONT_WORMWOOD,
-	--TALKINGFONT_HERMIT   = TALKINGFONT_HERMIT,
+	TALKINGFONT_HERMIT   = TALKINGFONT_HERMIT,
 	NEWFONT = NEWFONT,
 	NEWFONT_SMALL = NEWFONT_SMALL,
 	NEWFONT_OUTLINE = NEWFONT_OUTLINE,
@@ -46,6 +46,7 @@ local LOCALIZED = {["talkingfont"] = true,
 	["bellefair50"] = true,
 	["bellefair_outline50"] = true,
 	["talkingfont_wormwood"] = true,
+	["talkingfont_hermit"] = true,
 	--["controllers"] = true,
 	["spirequal"] = rawget(_G,"NEWFONT") and true or nil,
 	["spirequal_small"] = rawget(_G,"NEWFONT_SMALL") and true or nil,
@@ -73,6 +74,7 @@ local function ApplyLocalizedFonts()
 	BODYTEXTFONT     = CACHED_FONTS.BODYTEXTFONT
 	
 	TALKINGFONT_WORMWOOD = CACHED_FONTS.TALKINGFONT_WORMWOOD
+	TALKINGFONT_TRADEIN = CACHED_FONTS.TALKINGFONT_WORMWOOD
 	TALKINGFONT_HERMIT   = CACHED_FONTS.TALKINGFONT_HERMIT
 	
 	NEWFONT = CACHED_FONTS.NEWFONT
@@ -132,9 +134,9 @@ local function ApplyLocalizedFonts()
 	SMALLNUMBERFONT  = FONT_PREFIX.."stint-ucr20"
 	BODYTEXTFONT     = FONT_PREFIX.."stint-ucr50"
 	
-	TALKINGFONT_HERMIT = FONT_PREFIX.."talkingfont"
 	TALKINGFONT_WORMWOOD = FONT_PREFIX.."talkingfont_wormwood"
-	--TALKINGFONT_HERMIT = FONT_PREFIX.."talkingfont_hermit"
+	TALKINGFONT_TRADEIN = FONT_PREFIX.."talkingfont_wormwood"
+	TALKINGFONT_HERMIT = FONT_PREFIX.."talkingfont_hermit"
 
 	NEWFONT = FONT_PREFIX.."spirequal"
 	NEWFONT_SMALL = FONT_PREFIX.."spirequal_small"
@@ -152,7 +154,7 @@ Sim.UnregisterAllPrefabs = function(self, ...)
 	ApplyLocalizedFonts()
 end
 
---insert a function that connects ukrainian fonts
+--insert a function that connects fonts
 local _RegisterPrefabs = ModManager.RegisterPrefabs --Replace the function in which you need to load fonts and correct global font constants
 ModManager.RegisterPrefabs = function(self, ...)
 	_RegisterPrefabs(self, ...)

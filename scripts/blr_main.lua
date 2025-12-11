@@ -4,82 +4,166 @@ local AddPrefabPostInit = AddPrefabPostInit
 local AddClassPostConstruct = env.AddClassPostConstruct
 local modimport = env.modimport
 
+local GLOBAL = GLOBAL
+local rawget = rawget
+local rawset = rawset
+
 GLOBAL.setfenv(1, GLOBAL)
+rawget  = GLOBAL.rawget
 
 require("constants")
 
 local DEBUG_ENABLED = false
-local DEBUG_ENABLE_ID = {
-	["KU_YhiKhjfu"] = true,
-	["OU_76561198137380697"] = true,
-	["KU_gwxUn9lD"] = true,
-	["OU_76561198089171367"] = true,
-	["KU_llXKvJxA"] = true, 
-}
-
-local CHEATS_ENABLE_ID = {
-	["KU_YhiKhjfu"] = true,
-	["OU_76561198137380697"] = true,
-	["KU_gwxUn9lD"] = true,
-	["OU_76561198089171367"] = true,
-}
-
-if CHEATS_ENABLE_ID[TheNet:GetUserID()] then
-	CHEATS_ENABLED = true
-end
-
-if DEBUG_ENABLE_ID[TheNet:GetUserID()] then
-	DEBUG_ENABLED = true
-	t.debug = true
-	t.mod_startup_t = os.clock()
-
-	t.ModLoaded = function()
-		t.print("MOD WAS LOADED IN ", os.clock() - t.mod_startup_t)
-	end
-end
 
 -- Удаляем уведомленіе о модах
 Sim.ShouldWarnModsLoaded = function() return false end
 
 modimport("scripts/blr_fonts.lua")
-modimport("scripts/blr_settings.lua")
 
--- іспользуемый CHATFONT_OUTLINE не поддержівает іконкі кнопок мыші і отображает іх знакамі ?
 AddClassPostConstruct("widgets/redux/loadingwidget", function(self)
-	if self and self.loading_tip_text then -- еслі советы отключены
-		self.loading_tip_text:SetFont(CHATFONT) 
-	end
+    if self and self.loading_tip_text then -- если советы не отключены
+        self.loading_tip_text:SetFont(BODYTEXTFONT)
+        self.loading_tip_text:SetSize(25) -- задаем размер шрифта (напрыклад, 30)
+    end
 end)
-
-if t.CurrentTranslationType == t.TranslationTypes.FontsOnly then
-	t.print("[BLR] Загрузка FontsOnly версіі завершена.")
-	if DEBUG_ENABLED then
-		t.ModLoaded()
-	end
 
 	--ісправленіе бага с шріфтом в спіннерах
 	--Выполняем подмену шріфта в спіннере із-за глупой ошібкі разрабов в этом віджете
 	--ніже есть версія для фікса перевода настроек--
-	AddClassPostConstruct("widgets/spinner", function(self, options, width, height, textinfo, ...)
-		if textinfo then return end
-		self.text:SetFont(BUTTONFONT)
-	end)
+AddClassPostConstruct("widgets/spinner", function(self, options, width, height, textinfo, ...)
+	if textinfo then return end
+	self.text:SetFont(BUTTONFONT)
+end)
 
-	return
-end
 
 --Загружаем русіфікацію
-print("Загрузка PO файла")
+print("Загрузка PO файлу")
 env.LoadPOFile(t.StorePath..t.MainPOfilename, t.SelectedLanguage)
 t.PO = LanguageTranslator.languages[t.SelectedLanguage]
 
+-- ===================================================================
+--  УНІВЕРСАЛЬНЫ ПЕРАКЛАДЧЫК РЭПЛІК + АБВЕСТАК СМЕРЦІ/УВАСКРАШЭННЯ
+--  Сумяшчальны з тваймі t.TranslateToBelarusian і іншымі хукамi
+-- ===================================================================
+
+local function runTranslatingEngine()
+    -- 1. Пераклад звычайных рэплік (нават з дэдыкаваных сервераў)
+    if rawget(GLOBAL, "Networking_Talk") then
+        local OldNetworking_Talk = GLOBAL.Networking_Talk
+
+        GLOBAL.Networking_Talk = function(guid, message, ...)
+            if type(message) ~= "string" then
+                return OldNetworking_Talk(guid, message, ...)
+            end
+
+            -- Ужо перакладзенае праз твой t.TranslateToBelarusian? → не чапаем
+            if message:find("[\227\132-\227\135]") then -- хуткі чэк на кірыліцу
+                return OldNetworking_Talk(guid, message, ...)
+            end
+
+            local translated = t.TranslateToBelarusian(message, Ents[guid]) or message
+            return OldNetworking_Talk(guid, translated, ...)
+        end
+    end
+
+    -- 2. Абвесткі пра смерць
+    -- Абвесткі пра смерць — з правільным скланеннем забойцы і ахвяры
+-- Абвесткі пра смерць з правільным скланеннем забойцы і ахвяры
+-- Абвесткі пра смерць — з правільным скланеннем забойцы і ахвяры
+	if GLOBAL.Networking_DeathAnnouncement and t and t.PO then
+        local OldDeath = GLOBAL.Networking_DeathAnnouncement
+
+        -- Гэтыя ключы дакладна павінны быць у tvoy.po
+        local sep1 = t.PO["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1"] or " was killed by "
+        local end_default = t.PO["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_DEFAULT"] or ""
+        local end_male    = t.PO["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_MALE"] or ""
+        local end_female  = t.PO["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_FEMALE"] or ""
+        local end_robot   = t.PO["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_ROBOT"] or ""
+
+        GLOBAL.Networking_DeathAnnouncement = function(message, ...)
+            if type(message) ~= "string" then return OldDeath(message, ...) end
+
+            local victim, attacker, ending = nil, nil, nil
+
+            -- Шукаем « was killed by »
+            for _, test_sep in ipairs({sep1, " was killed by "}) do
+                local startpos = message:find(test_sep, 1, true)
+                if startpos then
+                    victim   = message:sub(1, startpos-1)
+                    local rest = message:sub(startpos + #test_sep)
+                    -- Шукаем канчатак (., male, female, robot, default)
+                    if rest:sub(-1) == "." then rest = rest:sub(1, -2) ending = "." end
+                    if rest:sub(-#end_male) == end_male then
+                        attacker = rest:sub(1, -#end_male-1)
+                        ending = end_male
+                    elseif rest:sub(-#end_female) == end_female then
+                        attacker = rest:sub(1, -#end_female-1)
+                        ending = end_female
+                    elseif rest:sub(-#end_robot) == end_robot then
+                        attacker = rest:sub(1, -#end_robot-1)
+                        ending = end_robot
+                    elseif rest:sub(-#end_default) == end_default then
+                        attacker = rest:sub(1, -#end_default-1)
+                        ending = end_default
+                    else
+                        attacker = rest
+                        ending = ""
+                    end
+                    break
+                end
+            end
+
+            if victim and attacker then
+                local newmsg = victim .. " " .. sep1 .. " " .. attacker .. (ending or "")
+                return OldDeath(newmsg, ...)
+            end
+
+            return OldDeath(message, ...)
+        end
+    end
+
+    -- 3. Абвесткі пра ўваскрашэнне
+    if rawget(GLOBAL, "Networking_ResurrectAnnouncement") then
+        local OldRezAnn = GLOBAL.Networking_ResurrectAnnouncement
+        local sep = STRINGS.UI.HUD.REZ_ANNOUNCEMENT -- « быў уваскрошаны »
+
+        GLOBAL.Networking_ResurrectAnnouncement = function(message, ...)
+            if type(message) ~= "string" then
+                return OldRezAnn(message, ...)
+            end
+
+            -- прыбіраем кропку для RTL-сумяшчальнасці
+            if message:sub(-1) == "." then
+                message = message:sub(1, -2)
+            end
+
+            if not sep then return OldRezAnn(message, ...) end
+
+            local k, l = message:find(sep, 1, true)
+            if not k then return OldRezAnn(message, ...) end
+
+            local victim   = message:sub(1, k-2)
+            local reviver  = message:sub(l+2)
+
+            local newmsg = victim .. " " ..
+                           (t.PO["STRINGS.UI.HUD.REZ_ANNOUNCEMENT"] or sep) .. " " ..
+                           reviver -- на англійскай
+
+            return OldRezAnn(newmsg, ...)
+        end
+    end
+end
+
+-- Запускаем адразу пасля загрузкі PO-файла
+
+
 -- TODO: Сделать внешній скріпт для этого
 for k, v in pairs(t.PO) do
-	if v == "<пусто>" or v:find("*PLACEHOLDER") then
+	if v == "<пуста>" or v:find("*PLACEHOLDER") then
 		t.PO[k] = nil
 	end
 end
-print("PO файл загружен!")
+print("PO файл загружаны!")
 
 --Возвращает корректную форму слова день (ілі другого, переданного вторым параметром)
 local function StringTime(n,s)
@@ -89,11 +173,12 @@ local function StringTime(n,s)
 	return s[pl_type]
 end
 
+runTranslatingEngine()
 --Пытается сформіровать правільные окончанія в словах названія предмета str1 в соответствіі действію action
 --objectname - названіе префаба предмета
 local function rebuildname(str1, action, objectname)
 	local function repsubstr(str, pos, substr)--вставіть подстроку substr в строку str в позіціі pos	
-		local dontrebuild = {"для", "за", "на", "в", "у"}; -- слова которые не нужно склонять
+		local dontrebuild = {"для", "за", "з", "на", "у", "і"}; -- слова которые не нужно склонять
 			for _,v in ipairs(dontrebuild) do 
 				if str == v then
 					return v
@@ -114,6 +199,7 @@ local function rebuildname(str1, action, objectname)
 	local sogl3 = {["р"]=1,["л"]=1,["к"]=1,["Р"]=1,["Л"]=1,["К"]=1}
 
 	local resstr=""
+	local neuter=false
 	local delimetr
 	local wasnoun=false
 	local wordcount=#(str1:gsub("[%s-]","~"):split("~"))
@@ -260,21 +346,29 @@ local function rebuildname(str1, action, objectname)
 					if not  FoundNoun then testnoun() end
 				end
 			elseif action=="WALKTO" then --падысці да (каго? чаго?) Родны
-				if SubSize(str, size -1)=="ая" and resstr=="" then
+				if SubSize(str, size -1)=="ая" then
 					str=repsubstr(str,size -1,"ай")
 				elseif SubSize(str, size -1)=="ая" then
-					str=repsubstr(str,size -1,"ей")
-				elseif SubSize(str, size -1)=="ей" then
-					str=repsubstr(str,size -1,"ью")
+					str=repsubstr(str,size -1,"ай")
+				elseif SubSize(str, size -1)=="ыя" then
+					str=repsubstr(str,size -1,"ых")
+				elseif SubSize(str, size -1)=="ае" then
+					str=repsubstr(str,size -1,"ага")
+					neuter=true
+				elseif SubSize(str, size -1)=="ое" then
+					str=repsubstr(str,size -1,"ога")
+					neuter=true
 				elseif SubSize(str, size -1)=="яя" then
-					str=repsubstr(str,size -1,"ей")
+					str=repsubstr(str,size -1,"яй")
 				elseif SubSize(str, size -1)=="ец" then
 					str=repsubstr(str,size -1,"цу")
-				elseif SubSize(str, size -1)=="ый" then
-					str=repsubstr(str,size -1,"ага")
-				elseif SubSize(str, size -1)=="ій" then
-					str=repsubstr(str,size -1,"ему")
-				elseif SubSize(str, size -1)=="ое" then
+				elseif SubSize(str, size -1)=="оў" then
+					str=repsubstr(str,size ,"ова")
+				elseif SubSize(str, size -1)=="цыя" then
+					str=repsubstr(str,size -1,"цыі")
+				elseif SubSize(str, size -1)=="ны" then
+					str=repsubstr(str,size ,"ага")
+				elseif SubSize(str, size -1)=="ае" then
 					str=repsubstr(str,size -1,"ага")
 				elseif SubSize(str, size -1)=="ее" then
 					str=repsubstr(str,size -1,"ему")
@@ -282,15 +376,13 @@ local function rebuildname(str1, action, objectname)
 					str=repsubstr(str,size -1,"ым")
 				elseif SubSize(str, size -1)=="ой" and resstr=="" then
 					str=repsubstr(str,size -1,"ому")
-				elseif SubSize(str, size -1)=="ья" and resstr=="" then
-					str=repsubstr(str,size -1,"ьей")
-				elseif SubSize(str, size -2)=="орь" then
-					str=SubSize(str, 1,size -3).."рю"
+				elseif SubSize(str, size -1)=="ава" and resstr=="" then
+					str=repsubstr(str,size,"авай")
 				elseif SubSize(str, size -1)=="ек" then
 					str=SubSize(str, 1,size -2).."ку"
 					wasnoun=true
 				elseif SubSize(str, size -2)=="ень" then
-					str=SubSize(str, 1,size -3).."ню"
+					str=SubSize(str, 1,size -3,"ню")
 				elseif SubSize(str, size -1)=="ок" then
 					str=repsubstr(str,size -1,"ку")
 					wasnoun=true
@@ -301,7 +393,7 @@ local function rebuildname(str1, action, objectname)
 					str=repsubstr(str,size ,"і")
 					wasnoun=true
 				elseif SubSize(str, size -1)=="ль" then
-					str=repsubstr(str,size ,"і")
+					str=repsubstr(str,size ,"я")
 					wasnoun=true
 				elseif SubSize(str, size -1)=="зь" then
 					str=repsubstr(str,size ,"і")
@@ -309,269 +401,165 @@ local function rebuildname(str1, action, objectname)
 				elseif SubSize(str, size -1)=="нь" then
 					str=repsubstr(str,size ,"ю")
 					wasnoun=true
-				elseif SubSize(str, size -1)=="р" then
-					str=repsubstr(str,size ,"у")
-					wasnoun=true
 				elseif SubSize(str, size -1)=="ьі" then
 					str=str.."м"
 				elseif SubSize(str, size -1)=="кі" and not wasnoun then
-					str=repsubstr(str,size ,"ам")
+					str=repsubstr(str,size ,"оў")
+					wasnoun=true
+				elseif SubSize(str, size -1)=="ха" and not wasnoun then
+					str=repsubstr(str,size ,"і")
+					wasnoun=true
+				elseif SubSize(str, size -1)=="га" and not wasnoun then
+					str=repsubstr(str,size ,"і")
+					wasnoun=true
+				elseif SubSize(str, size -1)=="ка" and not wasnoun then
+					str=repsubstr(str,size ,"і")
+					wasnoun=true
+				elseif SubSize(str, size -1)=="аў" and not wasnoun then
+					str=repsubstr(str,size ,"ва")
+					wasnoun=true
+				elseif SubSize(str, size -1)=="шча" and not wasnoun then
+					str=repsubstr(str,size ,"а")
 					wasnoun=true
 				elseif SubSize(str, size )=="ы" and not wasnoun then
-					str=repsubstr(str,size ,"ам")
-					wasnoun=true
-				elseif SubSize(str, size )=="ы" and not wasnoun then
-					str=repsubstr(str,size ,"ам")
-					wasnoun=true
-				elseif SubSize(str, size )=="а" and not wasnoun then
-					str=repsubstr(str,size ,"е")
+					str=repsubstr(str,size ,"ага")
+				elseif SubSize(str, size )=="а" and not wasnoun and not neuter then
+					str=repsubstr(str,size ,"ы")
 					wasnoun=true
 				elseif SubSize(str, size )=="я" and not wasnoun then
-					str=repsubstr(str,size ,"е")
+					str=repsubstr(str,size ,"і")
 					wasnoun=true
 				elseif SubSize(str, size )=="о" and not wasnoun then
-					str=repsubstr(str,size ,"у")
-					wasnoun=true
-				elseif SubSize(str, size -1)=="це" and not wasnoun then
-					str=repsubstr(str,size -1,"цу")
+					str=repsubstr(str,size ,"а")
 					wasnoun=true
 				elseif SubSize(str, size )=="е" and not wasnoun then
 					str=repsubstr(str,size ,"ю")
 					wasnoun=true
 				elseif sogl[SubSize(str, size )] and not wasnoun then
-					str=str.."у"
+					str=str.."а"
 					wasnoun=true
 				end
-			-- (Кого? Чего?) ізменяет внешній від у (кого? чего?) Родітельный
+			-- (Каго? Што?) відазмяняе (каго? што?) вінавальны
 			elseif action=="reskin" then
-						if SubSize(str, size -5)=="камень" then
-							str=repsubstr(str,size -5,"камня"):utf8sub(1, -2)
-						elseif SubSize(str, size -5)=="Сказкі" then
-							str=repsubstr(str,size -5,"Сказок")
-						elseif SubSize(str, size -4)=="льная" then
-							str=repsubstr(str,size -4,"льной")
-						elseif SubSize(str, size -4)=="дство" then
-							str=repsubstr(str,size -4,"дства")
-						elseif SubSize(str, size -3)=="алун" then
-							str=repsubstr(str,size -3,"алуна")
-						elseif SubSize(str, size -3)=="свая" then
-							str=repsubstr(str,size -3,"сваі")
-						elseif SubSize(str, size -3)=="весы" then
-							str=repsubstr(str,size -3,"весов")
-						elseif SubSize(str, size -3)=="Весы" then
-							str=repsubstr(str,size -3,"Весов")
-						elseif SubSize(str, size -3)=="шіна" then
-							str=repsubstr(str,size -3,"шіны")
-						elseif SubSize(str, size -3)=="ація" then
-							str=repsubstr(str,size -3,"аціі")
-						elseif SubSize(str, size -3)=="всём" then
-							str=repsubstr(str,size -3,"всём")
-						elseif SubSize(str, size -3)=="ляры" then
-							str=repsubstr(str,size -3,"ляров")
-						elseif SubSize(str, size -3)=="ское" then
-							str=repsubstr(str,size -3,"ского")
-						elseif SubSize(str, size -3)=="атур" then
-							str=repsubstr(str,size -3,"атуры")
-						elseif SubSize(str, size -3)=="еніе" then
-							str=repsubstr(str,size -3,"енія")
-						elseif SubSize(str, size -3)=="аніе" then
-							str=repsubstr(str,size -3,"анія")
-						elseif SubSize(str, size -3)=="едія" then
-							str=repsubstr(str,size -3,"едіі")
-						elseif SubSize(str, size -3)=="эрма" then
-							str=repsubstr(str,size -3,"эрма")
-						elseif SubSize(str, size -3)=="ночь" then
-							str=repsubstr(str,size -3,"ночь")
-						elseif SubSize(str, size -3)=="обіе" then
-							str=repsubstr(str,size -3,"обія")
-						elseif SubSize(str, size -3)=="Стол" then
-							str=repsubstr(str,size -3,"Стол")
-						elseif SubSize(str, size -3)=="Улей" then
-							str=repsubstr(str,size -3,"Улья")
-						elseif SubSize(str, size -3)=="Пана" then
-							str=repsubstr(str,size -3,"Пана")
-						elseif SubSize(str, size -3)=="чіна" then
-							str=repsubstr(str,size -3,"чіны")
-						elseif SubSize(str, size -3)=="жіна" then
-							str=repsubstr(str,size -3,"жіны")
-						elseif SubSize(str, size -3)=="пуса" then
-							str=repsubstr(str,size -3,"пуса")
-						elseif SubSize(str, size -3)=="Вілы" then
-							str=str:utf8sub(1, -2)
-						elseif SubSize(str, size -3)=="вілы" then
-							str=str:utf8sub(1, -2)
-						elseif SubSize(str, size -3)=="стей" then
-							str=repsubstr(str,size -3,"стей")
-						elseif SubSize(str, size -3)=="орія" then
-							str=repsubstr(str,size -3,"оріі")
-						elseif SubSize(str, size -3)=="міна" then
-							str=repsubstr(str,size -3,"міны")
-						elseif SubSize(str, size -3)=="фало" then
-							str=repsubstr(str,size -3,"фало")
-						elseif SubSize(str, size -2)=="зой" then
-							str=repsubstr(str,size -2,"зой")
-						elseif SubSize(str, size -2)=="йца" then
-							str=repsubstr(str,size -2,"йца")
-						elseif SubSize(str, size -2)=="для" then
-							str=repsubstr(str,size -2,"для")
-						elseif SubSize(str, size -2)=="арь" then
-							str=repsubstr(str,size -2,"аря")
-						elseif SubSize(str, size -2)=="Тэм" then
-							str=repsubstr(str,size -2,"Тэм")
-						elseif SubSize(str, size -2)=="тёр" then
-							str=repsubstr(str,size -2,"тра")
-						elseif SubSize(str, size -2)=="ейл" then
-							str=repsubstr(str,size -2,"ейл")
-						elseif SubSize(str, size -2)=="іна" then
-							str=repsubstr(str,size ,"а")
-						elseif SubSize(str, size -2)=="лун" then
-							str=repsubstr(str,size -2,"лун")
-						elseif SubSize(str, size -2)=="асы" then
-							str=repsubstr(str,size -2,"асов")
-						elseif SubSize(str, size -2)=="лей" then
-							str=repsubstr(str,size -2,"лей")
-						elseif SubSize(str, size -2)=="ода" then
-							str=repsubstr(str,size -2,"ода")
-						elseif SubSize(str, size -2)=="ера" then
-							str=repsubstr(str,size -2,"ера")
-						elseif SubSize(str, size -2)=="ній" then
-							str=repsubstr(str,size -2,"него")
-						elseif SubSize(str, size -2)=="щій" then
-							str=repsubstr(str,size -2,"щего")
-						elseif SubSize(str, size -2)=="ьей" then
-							str=repsubstr(str,size -2,"ьей")
-						elseif SubSize(str, size -2)=="еля" then
-							str=repsubstr(str,size -2,"еля")
-						elseif SubSize(str, size -2)=="ыга" then
-							str=repsubstr(str,size -2,"ыгі")
-						elseif SubSize(str, size -2)=="шок" then
-							str=repsubstr(str,size -2,"шка")							
-						elseif SubSize(str, size -2)=="іна" then
-							str=repsubstr(str,size -2,"іны")						
-						elseif SubSize(str, size -2)=="ово" then
-							str=repsubstr(str,size -2,"ова")
-						elseif SubSize(str, size -2)=="ікі" then
-							str=repsubstr(str,size ,"ов")
-						elseif SubSize(str, size -2)=="уса" then
-							str=str:utf8sub(1, -2)
-						elseif SubSize(str, size -2)=="нец" then
-							str=repsubstr(str,size -2,"нец")
-						elseif SubSize(str, size -2)=="ное" then
-							str=repsubstr(str,size -2,"ного")
-						elseif SubSize(str, size -2)=="чій" then
-							str=repsubstr(str,size -2,"чего")
-						elseif SubSize(str, size -2)=="ало" then
-							str=str:utf8sub(1, -2)
-						elseif SubSize(str, size -2)=="ота" then
-							str=str:utf8sub(1, -2)
-						elseif SubSize(str, size -1)=="ій" then
-							str=repsubstr(str,size -1,"ого")
-						elseif SubSize(str, size -1)=="ьё" then
-							str=repsubstr(str,size -1,"ья")
-						elseif SubSize(str, size -1)=="зд" then
-							str=repsubstr(str,size -1,"зд")
-						elseif SubSize(str, size -1)=="на" then
-							str=repsubstr(str,size ,"ы")
-						elseif SubSize(str, size -1)=="ль" then
-							str=repsubstr(str,size ,"я")
-						elseif SubSize(str, size -1)=="ые" then
-							str=repsubstr(str,size -1,"ых")
-						elseif SubSize(str, size -1)=="ок" then
-							str=repsubstr(str,size -1,"ка")
-						elseif SubSize(str, size -1)=="ка" then
-							str=repsubstr(str,size -1,"кі")
-						elseif SubSize(str, size -1)=="та" then
-							str=repsubstr(str,size -1,"ты")
-						elseif SubSize(str, size -1)=="ян" then
-							str=repsubstr(str,size -1,"ян")
-						elseif SubSize(str, size -1)=="ой" then
-							str=repsubstr(str,size -1,"ого")
-						elseif SubSize(str, size -1)=="ая" then
-							str=repsubstr(str,size -1,"ой")
-						elseif SubSize(str, size -1)=="ля" then
-							str=str:utf8sub(1, -2)
-						elseif SubSize(str, size -1)=="ло" then
-							str=repsubstr(str,size -1,"ла")
-						elseif SubSize(str, size -1)=="ол" then
-							str=repsubstr(str,size -1,"ола")
-						elseif SubSize(str, size -1)=="ом" then
-							str=repsubstr(str,size -1,"ома")
-						elseif SubSize(str, size -1)=="ья" then
-							str=repsubstr(str,size -1,"ьей")
-						elseif SubSize(str, size -1)=="ія" then
-							str=repsubstr(str,size -1,"ій")
-						elseif SubSize(str, size -1)=="із" then
-							str=repsubstr(str,size -1,"із")
-						elseif SubSize(str, size -1)=="па" then
-							str=repsubstr(str,size -1,"пы")
-						elseif SubSize(str, size -1)=="ще" then
-							str=repsubstr(str,size -1,"ща")
-						elseif SubSize(str, size -1)=="нь" then
-							str=repsubstr(str,size -1,"ня")
-						elseif SubSize(str, size -1)=="яя" then
-							str=repsubstr(str,size -1,"ей")
-						elseif SubSize(str, size -1)=="це" then
-							str=repsubstr(str,size -1,"ца")
-						elseif SubSize(str, size -1)=="ей" then
-							str=repsubstr(str,size -1,"ья")
-						elseif SubSize(str, size -1)=="ый" then
-							str=repsubstr(str,size -1,"ого")
-						elseif SubSize(str, size )=="ь" then
-							str=repsubstr(str,size ,"і")
-						elseif SubSize(str, size )=="я" then
-							str=repsubstr(str,size ,"і")
-						elseif SubSize(str, size )=="а" then
-							str=repsubstr(str,size ,"ы")
-						elseif sogl[SubSize(str, size )] then
-							str=str.."а"
-						-- end
-				else
-					if t.NamesGender["she"][objectname] then --женскій род
-						if SubSize(str, size -1)=="ая" then
-							str=repsubstr(str,size -1,"ой")
-						elseif SubSize(str, size -1)=="яя" then
-							str=repsubstr(str,size -1,"ей")
-						elseif SubSize(str, size -1)=="ья" then
-							str=repsubstr(str,size ,"ей")
-						elseif str:utf8sub(-4)=="аяся" then
-							str=repsubstr(str,size -3,"ейся")
-						end
-					elseif t.NamesGender["it"][objectname] then --средній род
-						if SubSize(str, size -2)=="кое" then
-							str=repsubstr(str,size -1,"ого")
-						elseif SubSize(str, size -1)=="ое" then
-							str=repsubstr(str,size -1,"ого")
-						elseif SubSize(str, size -1)=="ее" then
-							str=repsubstr(str,size -1,"его")
-						end
-					elseif t.NamesGender["plural"][objectname] or
-						   t.NamesGender["plural2"][objectname] then --множественное чісло
-						if SubSize(str, size -1)=="ые" then
-							str=repsubstr(str,size -1,"ых")
-						elseif SubSize(str, size -1)=="іе" then
-							str=repsubstr(str,size -1,"іх")
-						elseif SubSize(str, size -1)=="ьі" then
-							str=repsubstr(str,size -1,"іх")
-						end
-					elseif t.NamesGender["he"][objectname] or t.NamesGender["he2"][objectname] then--мужской род
-						if SubSize(str, size -1)=="ый" then
-							str=repsubstr(str,size -1,"ого")
-						elseif SubSize(str, size -1)=="ій" then
-							str=repsubstr(str,size -1,"его")
-						elseif SubSize(str, size -1)=="ой" then
-							str=repsubstr(str,size -1,"ого")
-						end
+				-- if t.NamesGender["she"][objectname] then --женскій род
+				-- 	if SubSize(str, size -1)=="ая" then
+				-- 		str=repsubstr(str,size -1,"ой")
+				-- 	elseif SubSize(str, size -1)=="яя" then
+				-- 		str=repsubstr(str,size -1,"ей")
+				-- 	elseif SubSize(str, size -1)=="ья" then
+				-- 		str=repsubstr(str,size ,"ей")
+				-- 	elseif str:utf8sub(-4)=="аяся" then
+				-- 		str=repsubstr(str,size -3,"ейся")
+				-- 	elseif SubSize(str, size -1)=="цыя" then
+				-- 		str=repsubstr(str,size -1,"цыю")
+				-- 	end
+				if t.NamesGender["it"][objectname] then --средній род
+					if SubSize(str, size -1)=="ня" then
+						str=repsubstr(str,size -1,"ня")
 					end
+				-- elseif t.NamesGender["plural"][objectname] or
+				-- 		t.NamesGender["plural2"][objectname] then --множественное чісло
+				-- 	if SubSize(str, size -1)=="ые" then
+				-- 		str=repsubstr(str,size -1,"ых")
+				-- 	elseif SubSize(str, size -1)=="іе" then
+				-- 		str=repsubstr(str,size -1,"іх")
+				-- 	elseif SubSize(str, size -1)=="ьі" then
+				-- 		str=repsubstr(str,size -1,"іх")
+				-- 	end
+				-- elseif t.NamesGender["he"][objectname] or t.NamesGender["he2"][objectname] then--мужской род
+				-- 	if SubSize(str, size -1)=="ый" then
+				-- 		str=repsubstr(str,size -1,"ого")
+				-- 	elseif SubSize(str, size -1)=="ій" then
+				-- 		str=repsubstr(str,size -1,"его")
+				-- 	elseif SubSize(str, size -1)=="ой" then
+				-- 		str=repsubstr(str,size -1,"ого")
+				-- 	end
+				elseif SubSize(str, size -3)=="ага" then
+					str=repsubstr(str,size -3,"ага")
+				elseif SubSize(str, size -2)=="ства" then
+					str=repsubstr(str,size -2,"ства")
+				elseif SubSize(str, size -2)=="ля" then
+					str=repsubstr(str,size -2,"лю")
+				elseif SubSize(str, size -2)=="міна" then
+					str=repsubstr(str,size ,"а")
+				elseif SubSize(str, size -2)=="цыя" then
+					str=repsubstr(str,size ,"ю")
+				elseif SubSize(str, size -2)=="дыя" then
+					str=repsubstr(str,size ,"ю")	
+				elseif SubSize(str, size -2)=="лей" then
+					str=repsubstr(str,size -2,"лей")
+				elseif SubSize(str, size -2)=="ода" then
+					str=repsubstr(str,size -2,"ода")
+				elseif SubSize(str, size -2)=="ера" then
+					str=repsubstr(str,size -2,"еру")
+				elseif SubSize(str, size -2)=="яра" then
+					str=repsubstr(str,size -2,"яра")
+				elseif SubSize(str, size -2)=="ьей" then
+					str=repsubstr(str,size -2,"ьей")
+				elseif SubSize(str, size -2)=="еля" then
+					str=repsubstr(str,size -2,"еля")
+				elseif SubSize(str, size -2)=="пак" then
+					str=repsubstr(str,size -2,"пка")						
+				elseif SubSize(str, size -2)=="ця" then
+					str=repsubstr(str,size -2,"цю")						
+				elseif SubSize(str, size -2)=="уса" then
+					str=str:utf8sub(1, -2)
+				elseif SubSize(str, size -2)=="іна" then
+					str=repsubstr(str,size ,"у")
+				elseif SubSize(str, size -2)=="нец" then
+					str=repsubstr(str,size -2,"нец")
+				elseif SubSize(str, size -2)=="ара" then
+					str=repsubstr(str,size -2,"ара")
+				elseif SubSize(str, size -2)=="ало" then
+					str=str:utf8sub(1, -2)
+				elseif SubSize(str, size -2)=="ота" then
+					str=str:utf8sub(1, -2)
+				elseif SubSize(str, size -1)=="ера" then
+					str=repsubstr(str,size -1,"еру")
+				elseif SubSize(str, size -1)=="зд" then
+					str=repsubstr(str,size -1,"зд")
+				elseif SubSize(str, size -1)=="ня" then
+					str=repsubstr(str,size -1,"ню")
+				elseif SubSize(str, size -2)=="шча" then
+					str=repsubstr(str,size ,"а")
+				elseif SubSize(str, size -1)=="ння" then
+					str=repsubstr(str,size -1,"ння")
+				elseif SubSize(str, size -1)=="ая" then
+					str=repsubstr(str,size -1,"ую")
+				elseif SubSize(str, size -1)=="ла" then
+					str=repsubstr(str,size -1,"ла")
+				elseif SubSize(str, size -1)=="ія" then
+					str=repsubstr(str,size -1,"ій")
+				elseif SubSize(str, size -1)=="ьца" then
+					str=repsubstr(str,size -1,"ьца")
+				elseif SubSize(str, size -1)=="па" then
+					str=repsubstr(str,size -1,"пу")
+				elseif SubSize(str, size -1)=="яя" then
+					str=repsubstr(str,size -1,"юю")
+				elseif SubSize(str, size -1)=="це" then
+					str=repsubstr(str,size -1,"ца")
+				elseif SubSize(str, size -1)=="ей" then
+					str=repsubstr(str,size -1,"ья")
+				elseif SubSize(str, size )=="нь" then
+					str=repsubstr(str,size ,"ня")
+				-- elseif SubSize(str, size )=="і" and not wasnoun then
+				-- 	str=repsubstr(str,size ,"ага")
+				elseif SubSize(str, size )=="а" and not wasnoun then
+					str=repsubstr(str,size ,"у")
+					wasnoun=true
+				elseif sogl[SubSize(str, size )] then
+					wasnoun=true	
+				
 				end
 			--ізучіть (Кого? Что?) Вінітельный
 			--пріменітельно к імені свіньі ілі кроліка
-			elseif action and objectname and (objectname=="pigman" or objectname=="pigguard" or objectname=="bunnyman" or objectname:find("critter")~=nil) then
-				if SubSize(str, size -2)=="нок" then
+			elseif action and objectname and (objectname=="pigman" or objectname=="pigguard" or objectname=="merm" or objectname=="bunnyman" or objectname:find("critter")~=nil) then
+				if SubSize(str, size -2)=="нак" then
 					str=SubSize(str, 1,size -2).."ка"
 				elseif SubSize(str, size -2)=="лец" then
 					str=SubSize(str, 1,size -2).."ьца"
-				elseif SubSize(str, size -2)=="ный" then
-					str=SubSize(str, 1,size -2).."аго"
+				elseif SubSize(str, size -2)=="ны" then
+					str=SubSize(str, 1,size -1).."ага"
 				elseif SubSize(str, size -1)=="ец" then
 					str=SubSize(str, 1,size -2).."ца"
 				elseif SubSize(str, size )=="а" then
@@ -580,20 +568,32 @@ local function rebuildname(str1, action, objectname)
 					str=SubSize(str, 1,size -1).."ю"
 				elseif SubSize(str, size )=="ь" then
 					str=SubSize(str, 1,size -1).."я"
-				elseif SubSize(str, size )=="й" then
-					str=SubSize(str, 1,size -1).."я"
+				elseif SubSize(str, size -1)=="ій" then
+					str=repsubstr(str,size -1,"ія")
+				elseif SubSize(str, size -1)=="ый" then
+					str=repsubstr(str,size -1,"ыя")
 				elseif sogl[SubSize(str, size )] then
 					str=str.."а"
 				end
-			elseif action and not(objectname and objectname=="sketch") then --ізучіть (Кого? Что?) Вінітельный
-				if SubSize(str, size -1)=="ая" then
+			elseif action and not(objectname and objectname=="sketch") then --агледзіць (Кага? Што?) Вінавальны
+				if SubSize(str, size -1)=="цыя" then
+					str=repsubstr(str,size -1,"цыю")
+				elseif SubSize(str, size -1)=="ое" or SubSize(str, size -1)=="ае" then
+					neuter=true
+				elseif SubSize(str, size -1)=="ая" then
 					str=repsubstr(str,size -1,"ую")
+				elseif SubSize(str, size -1)=="ль" then
+					str=repsubstr(str,size -1,"ля")
+				elseif SubSize(str, size -1)=="ыя" then
+					str=repsubstr(str,size -1,"ыя")
 				elseif SubSize(str, size -1)=="яя" then
 					str=repsubstr(str,size -1,"юю")
-				elseif SubSize(str, size )=="а" then
+				elseif SubSize(str, size )=="а"  and not wasnoun and not neuter then
 					str=repsubstr(str,size ,"у")
-				elseif SubSize(str, size )=="я" then
+					wasnoun=true
+				elseif SubSize(str, size )=="я"  and not wasnoun then
 					str=repsubstr(str,size ,"ю")
+					wasnoun=true
 				end
 			end
 			resstr=resstr..str..delimetr
@@ -612,7 +612,7 @@ if DEBUG_ENABLED then
 	require("blr_debug")
 end
 
-t.RussianNames = {} --Табліца с особымі формамі названій предметов в разлічных падежах
+t.BelarusianNames = {} --Табліца с особымі формамі названій предметов в разлічных падежах
 t.ShouldBeCapped = {} --Табліца, в которой находітся спісок названій, первое слово которых пішется с большой буквы
 
 --Табліца со спіскамі імён, отсортірованнымі по полам
@@ -651,13 +651,13 @@ local function split(str,sep)
 end
 
 
-local LetterCasesHash={u2l={["А"]="а",["Б"]="б",["В"]="в",["Г"]="г",["Д"]="д",["Е"]="е",["Ё"]="ё",["Ж"]="ж",["З"]="з",
+local LetterCasesHash={u2l={["А"]="а",["Б"]="б",["В"]="в",["Г"]="г",["Ґ"]="ґ",["Д"]="д",["Е"]="е",["Ё"]="ё",["Ж"]="ж",["З"]="з",
 							["і"]="і",["Й"]="й",["К"]="к",["Л"]="л",["М"]="м",["Н"]="н",["О"]="о",["П"]="п",["Р"]="р",
-							["С"]="с",["Т"]="т",["У"]="у",["Ф"]="ф",["Х"]="х",["Ц"]="ц",["Ч"]="ч",["Ш"]="ш",["Щ"]="щ",
+							["С"]="с",["Т"]="т",["У"]="у",["Ў"]="ў",["Ф"]="ф",["Х"]="х",["Ц"]="ц",["Ч"]="ч",["Ш"]="ш",["Щ"]="щ",
 							["Ъ"]="ъ",["Ы"]="ы",["Ь"]="ь",["Э"]="э",["Ю"]="ю",["Я"]="я"},
-					   l2u={["а"]="А",["б"]="Б",["в"]="В",["г"]="Г",["д"]="Д",["е"]="Е",["ё"]="Ё",["ж"]="Ж",["з"]="З",
+					   l2u={["а"]="А",["б"]="Б",["в"]="В",["г"]="Г",["ґ"]="Ґ",["д"]="Д",["е"]="Е",["ё"]="Ё",["ж"]="Ж",["з"]="З",
 							["і"]="і",["й"]="Й",["к"]="К",["л"]="Л",["м"]="М",["н"]="Н",["о"]="О",["п"]="П",["р"]="Р",
-							["с"]="С",["т"]="Т",["у"]="У",["ф"]="Ф",["х"]="Х",["ц"]="Ц",["ч"]="Ч",["ш"]="Ш",["щ"]="Щ",
+							["с"]="С",["т"]="Т",["у"]="У",["ў"]="Ў",["ф"]="Ф",["х"]="Х",["ц"]="Ц",["ч"]="Ч",["ш"]="Ш",["щ"]="Щ",
 							["ъ"]="Ъ",["ы"]="Ы",["ь"]="Ь",["э"]="Э",["ю"]="Ю",["я"]="Я"}}
 
 --первый сімвол в ніжній регістр
@@ -686,7 +686,7 @@ local function islower(letter)
 	return LetterCasesHash.l2u[letter] or (#letter==1 and letter>="a" and letter<="z")
 end
 
-local function russianupper(tmp)
+local function belarusianupper(tmp)
 	if not tmp then return end
 	local res=""
 	local letter
@@ -698,7 +698,7 @@ local function russianupper(tmp)
 	return res
 end
 
-local function russianlower(tmp)
+local function belarusianlower(tmp)
 	if not tmp then return end
 	local res=""
 	local letter
@@ -714,71 +714,77 @@ end
 --Функція меняет окончанія прілагательного prefix в завісімості от падежа, пола і чісла предмета
 local FixPrefix
 do
-	local soft23={["г"]=1,["к"]=1,["х"]=1}
-	local soft45={["г"]=1,["ж"]=1,["к"]=1,["ч"]=1,["х"]=1,["ш"]=1,["щ"]=1}
+	--local soft23={["г"]=1,["к"]=1,["х"]=1}
+	--local soft45={["г"]=1,["ж"]=1,["к"]=1,["ч"]=1,["х"]=1,["ш"]=1,["щ"]=1}
 	local endings={}
-	--Табліца окончаній в завісімості от действія і пола
-	--case2 і case3, а так же case4 і case5 — твёрдый і мягкій пары
-				-- влажный      сіній  скользкій    простой    большой
-	--іменітельный Кто? Что?
+	--таблиця закінчень в залежності від дій і статі // ps в українській мові є тільки case1 і case2 // можливо ще но хз
+	--case1 і case2 — тверда м'які пари
+				--  чорний      Синій(жовтий)
+	--Називний Хто? Що?
 	endings["nom"]={
-		he=		{case1="ы",case2="і",case3="і",case4="ы",case5="і"},
-		he2=	{case1="ы",case2="і",case3="і",case4="ы",case5="і"},
-		she=	{case1="ая",case2="ая",case3="ая",case4="ая",case5="ая"},
-		it=		{case1="ае",case2="ее",case3="ае",case4="ае",case5="ае"},
-		plural=	{case1="ыя",case2="ія",case3="ія",case4="ыя",case5="ія"},
-		plural2={case1="ыя",case2="ія",case3="ія",case4="ыя",case5="ія"}}
-	--Вінітельный Кого? Что?
+        he=     {case1="ий",case2="ій"},
+        he2=    {case1="ий",case2="ій"},
+        she=    {case1="а", case2="я" },
+        it=     {case1="е", case2="є" },
+        plural= {case1="і", case2="і" },
+        plural2={case1="е", case2="е" }}
+	
+	 --Знахідний Кого? Що?
 	endings["acc"]={
-		he=		{case1="ы",case2="і",case3="і",case4="ы",case5="ы"},
-		he2=	{case1="ага",case2="яга",case3="аго",case4="аго",case5="аго"},
-		she=	{case1="ую",case2="ую",case3="ую",case4="ую",case5="ую"},
-		it=		{case1="ое",case2="ее",case3="ое",case4="ое",case5="ое"},
-		plural=	{case1="ыя",case2="ія",case3="ія",case4="ыя",case5="ія"},
-		plural2={case1="ых",case2="іх",case3="іх",case4="ых",case5="іх"}}
-	--Дательный Кому? Чему?
+        he=     {case1="ий", case2="ій"  },   ---case2 he h2 mb swap 
+        he2=    {case1="ого",case2="ього"},
+        she=    {case1="у",  case2="ю"   },
+        it=     {case1="е",  case2="є"   },
+        plural= {case1="і",  case2="і"   },
+        plural2={case1="е",  case2="е"   }}
+
+    --Давальний Кому? Чому?
 	endings["dat"]={
-		he=		{case1="аму",case2="яму",case3="аму",case4="аму",case5="аму"},
-		he2=	{case1="аму",case2="яму",case3="аму",case4="аму",case5="аму"},
-		she=	{case1="ай",case2="яй",case3="ай",case4="ай",case5="ай"},
-		it=		{case1="аму",case2="яму",case3="аму",case4="аму",case5="аму"},
-		plural=	{case1="ым",case2="ім",case3="ім",case4="ым",case5="ім"},
-		plural2={case1="ым",case2="ім",case3="ім",case4="ым",case5="ім"}}
-	--Творітельный Кем? Чем?
+        he=     {case1="ому",case2="ьому"},
+        he2=    {case1="ому",case2="ьому"},
+        she=    {case1="ій", case2="ій"  },
+        it=     {case1="ому",case2="ьому"},
+        plural= {case1="им", case2="ім"  },
+        plural2={case1="е",  case2="е"   }}
+
+    --Орудний Ким? Чим?
 	endings["abl"]={
-		he=		{case1="ым",case2="ім",case3="ім",case4="ым",case5="ім"},
-		he2=	{case1="ым",case2="ім",case3="ім",case4="ым",case5="ім"},
-		she=	{case1="ай",case2="яй",case3="ай",case4="ай",case5="ай"},
-		it=		{case1="ым",case2="ім",case3="ім",case4="ым",case5="ім"},
-		plural=	{case1="ымі",case2="імі",case3="імі",case4="ымі",case5="імі"},
-		plural2=	{case1="ымі",case2="імі",case3="імі",case4="ымі",case5="імі"}}
-	--Родітельный Кого? Чего?
+        he=     {case1="им", case2="ім" },
+        he2=    {case1="им", case2="ім" },
+        she=    {case1="ою", case2="ьою"},
+        it=     {case1="им", case2="ім" },
+        plural= {case1="ими",case2="іми"},
+        plural2={case1="е",  case2="е"  }}
+
+    --Родовий Кого? Чого?
 	endings["gen"]={
-		he=		{case1="ага",case2="яга",case3="ага",case4="ага",case5="ага"},
-		he2=	{case1="ага",case2="яга",case3="ага",case4="ага",case5="ага"},
-		she=	{case1="ай",case2="яй",case3="ай",case4="ай",case5="ай"},
-		it=		{case1="ага",case2="яга",case3="ага",case4="ага",case5="ага"},
-		plural=	{case1="ых",case2="іх",case3="іх",case4="ых",case5="іх"},
-		plural2={case1="ых",case2="іх",case3="іх",case4="ых",case5="іх"}}
-	--Предложный О ком? О чём?
+        he=     {case1="ого",case2="ього"},
+        he2=    {case1="ого",case2="ія"  },
+        she=    {case1="ої",case2="ьої"  },
+        it=     {case1="ого",case2="ього"},
+        plural= {case1="их",case2="іх"   },
+        plural2={case1="ого",case2="ого" }}
+
+    --Місцевий Про кого? Про що?
 	endings["loc"]={
-		he=		{case1="ым",case2="ім",case3="ім",case4="ым",case5="ім"},
-		he2=	{case1="ым",case2="ім",case3="ім",case4="ым",case5="ім"},
-		she=	{case1="ай",case2="яй",case3="ай",case4="ай",case5="ай"},
-		it=		{case1="ым",case2="ім",case3="ім",case4="ым",case5="ім"},
-		plural=	{case1="ых",case2="іх",case3="іх",case4="ых",case5="іх"},
-		plural2={case1="ых",case2="іх",case3="іх",case4="ых",case5="іх"}}
+        he=     {case1="ому",case2="ьому"},
+        he2=    {case1="ому",case2="ім"  },
+        she=    {case1="ій", case2="ій"  },
+        it=     {case1="ому",case2="ьому"},
+        plural= {case1="их", case2="іх"  },
+        plural2={case1="е", case2="е"    }}
 
 	--дополнітельные поля под разлічные действія в ігре
 	endings["NOACTION"] = endings["nom"]
-	endings["DEFAULTACTION"] = endings["acc"]
-	endings["WALKTO"] = endings["dat"]
+	endings["DEFAULTACTION"] = endings["acc"] --acc
+	endings["WALKTO"] = endings["gen"] ---dat       -- вологого  -- 
 	endings["SLEEPIN"] = endings["loc"]
 	endings["ASSESSPLANTHAPPINESS"] = endings["gen"]
 	endings["PLANTREGISTRY_RESEARCH"] = endings["acc"]	
 	endings["INTERACT_WITH"] = endings["abl"]
-	endings["STEER_BOAT"] = endings["abl"]	
 	endings["CHARGE_FROM"] = endings["gen"]	
+	endings["OPEN_CRAFTING"] = endings["dat"]
+	endings["TRADE_WITH "]= endings["abl"]
 
 	-- для рода реліквій, т.к. імеем одно выводімое імя, но разные префабы
 	local relics = {ruins_chair=1, ruins_table=1, ruins_vase=1, ruins_plate=1, ruins_bowl=1, ruins_chipbowl=1}
@@ -800,7 +806,7 @@ do
 		end		
 
 		--Особый случай. Для действія "Собрать" у меня есть трі запісі с заменённым текстом. Там получается множественное чісло.
-		if act=="PICK" and item and t.RussianNames[STRINGS.NAMES[string.upper(item)]] and t.RussianNames[STRINGS.NAMES[string.upper(item)]][act] then gender="plural" end
+		if act=="PICK" and item and t.BelarusianNames[STRINGS.NAMES[string.upper(item)]] and t.BelarusianNames[STRINGS.NAMES[string.upper(item)]][act] then gender="plural" end
  
 		--Смена пола префікса для ВЫРОСШЕГО урожая на грядках, пол берём із плода
 		--прімер: для выросшей моркові "NAMES.FARM_PLANT_CARROT" пол берётся із "NAMES.CARROT"
@@ -829,27 +835,20 @@ do
 		local words=string.split(prefix," ") --разбіваем на слова
 		prefix=""
 		for _, word in ipairs(words) do
-			if --[[isupper(word:utf8sub(1,1)) and ]]word:utf8len()>3 and word~="влагой" then
+			if --[[isupper(word:utf8sub(1,1)) and ]]word:utf8len()>3 then
 				--Заменяем по всем возможным сценаріям
 				if word:utf8sub(-2)=="ы" then
 					word=word:utf8sub(1,word:utf8len()-2)..endings[act][gender]["case1"]
+					--print(word)
 				elseif word:utf8sub(-2)=="і" then
-					if soft23[word:utf8sub(-3,-3)] then
-						word=word:utf8sub(1,word:utf8len()-2)..endings[act][gender]["case3"]
-					else
 						word=word:utf8sub(1,word:utf8len()-2)..endings[act][gender]["case2"]
-					end
-				elseif word:utf8sub(-2)=="ы" then
-					if soft45[word:utf8sub(-3,-3)] then
-						word=word:utf8sub(1,word:utf8len()-2)..endings[act][gender]["case5"]
-					else
-						word=word:utf8sub(1,word:utf8len()-2)..endings[act][gender]["case4"]
-					end
+				elseif word:utf8sub(-2)=="ою" then
+					word=word
 				end
 			end
 			prefix=prefix..word.." "
 		end
-		prefix=prefix:utf8sub(1,1)..russianlower(prefix:utf8sub(2,-2))
+		prefix=prefix:utf8sub(1,1)..belarusianlower(prefix:utf8sub(2,-2))
 		return prefix
 	end
 end
@@ -972,46 +971,46 @@ function t.ParseTranslationTags(message, char, talker, optionaltags)
 	return message
 end
 
---Сохраняем строкі анонсов на русском
-local announcerus = t.announcerus or {}
-local ru=t.PO
-announcerus.LEFTGAME=ru["STRINGS.UI.NOTIFICATION.LEFTGAME"] or ""
-announcerus.JOINEDGAME=ru["STRINGS.UI.NOTIFICATION.JOINEDGAME"] or ""
-announcerus.KICKEDFROMGAME=ru["STRINGS.UI.NOTIFICATION.KICKEDFROMGAME"] or ""
-announcerus.BANNEDFROMGAME=ru["STRINGS.UI.NOTIFICATION.BANNEDFROMGAME"] or ""
---announcerus.NEW_SKIN_ANNOUNCEMENT=ru["STRINGS.UI.NOTIFICATION.NEW_SKIN_ANNOUNCEMENT"] or ""
+-- --Сохраняем строкі анонсов на русском
+-- local announcerus = t.announcerus or {}
+-- local ru=t.PO
+-- announcerus.LEFTGAME=ru["STRINGS.UI.NOTIFICATION.LEFTGAME"]
+-- announcerus.JOINEDGAME=ru["STRINGS.UI.NOTIFICATION.JOINEDGAME"]
+-- announcerus.KICKEDFROMGAME=ru["STRINGS.UI.NOTIFICATION.KICKEDFROMGAME"]
+-- announcerus.BANNEDFROMGAME=ru["STRINGS.UI.NOTIFICATION.BANNEDFROMGAME"]
+-- --announcerus.NEW_SKIN_ANNOUNCEMENT=ru["STRINGS.UI.NOTIFICATION.NEW_SKIN_ANNOUNCEMENT"] or ""
 
-announcerus.DEATH_ANNOUNCEMENT_1=ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1"] or ""
-announcerus.DEATH_ANNOUNCEMENT_2_MALE=ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_MALE"] or ""
-announcerus.DEATH_ANNOUNCEMENT_2_FEMALE=ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_FEMALE"] or ""
-announcerus.DEATH_ANNOUNCEMENT_2_ROBOT=ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_ROBOT"] or ""
-announcerus.DEATH_ANNOUNCEMENT_2_DEFAULT=ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_DEFAULT"] or ""
-announcerus.GHOST_DEATH_ANNOUNCEMENT_MALE=ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_MALE"] or ""
-announcerus.GHOST_DEATH_ANNOUNCEMENT_FEMALE=ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_FEMALE"] or ""
-announcerus.GHOST_DEATH_ANNOUNCEMENT_ROBOT=ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_ROBOT"] or ""
-announcerus.GHOST_DEATH_ANNOUNCEMENT_DEFAULT=ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_DEFAULT"] or ""
-announcerus.REZ_ANNOUNCEMENT=ru["STRINGS.UI.HUD.REZ_ANNOUNCEMENT"] or ""
-announcerus.START_AFK=ru["STRINGS.UI.HUD.START_AFK"] or ""
-announcerus.STOP_AFK=ru["STRINGS.UI.HUD.STOP_AFK"] or ""
+-- announcerus.DEATH_ANNOUNCEMENT_1=ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1"] 
+-- announcerus.DEATH_ANNOUNCEMENT_2_MALE=ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_MALE"] 
+-- announcerus.DEATH_ANNOUNCEMENT_2_FEMALE=ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_FEMALE"]
+-- announcerus.DEATH_ANNOUNCEMENT_2_ROBOT=ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_ROBOT"]
+-- announcerus.DEATH_ANNOUNCEMENT_2_DEFAULT=ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_DEFAULT"] 
+-- announcerus.GHOST_DEATH_ANNOUNCEMENT_MALE=ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_MALE"] 
+-- announcerus.GHOST_DEATH_ANNOUNCEMENT_FEMALE=ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_FEMALE"] 
+-- announcerus.GHOST_DEATH_ANNOUNCEMENT_ROBOT=ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_ROBOT"] 
+-- announcerus.GHOST_DEATH_ANNOUNCEMENT_DEFAULT=ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_DEFAULT"] 
+-- announcerus.REZ_ANNOUNCEMENT=ru["STRINGS.UI.HUD.REZ_ANNOUNCEMENT"]
+-- announcerus.START_AFK=ru["STRINGS.UI.HUD.START_AFK"]
+-- announcerus.STOP_AFK=ru["STRINGS.UI.HUD.STOP_AFK"]
 
---Обнуляем іх, чтобы оні не перевелісь, і сервер всегда пісал на англійском
-ru["STRINGS.UI.NOTIFICATION.LEFTGAME"]=nil
-ru["STRINGS.UI.NOTIFICATION.JOINEDGAME"]=nil
-ru["STRINGS.UI.NOTIFICATION.KICKEDFROMGAME"]=nil
-ru["STRINGS.UI.NOTIFICATION.BANNEDFROMGAME"]=nil
---ru["STRINGS.UI.NOTIFICATION.NEW_SKIN_ANNOUNCEMENT"]=nil
-ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1"]=nil
-ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_MALE"]=nil
-ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_FEMALE"]=nil
-ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_ROBOT"]=nil
-ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_DEFAULT"]=nil
-ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_MALE"]=nil
-ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_FEMALE"]=nil
-ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_ROBOT"]=nil
-ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_DEFAULT"]=nil
-ru["STRINGS.UI.HUD.REZ_ANNOUNCEMENT"]=nil
-ru["STRINGS.UI.HUD.START_AFK"]=nil
-ru["STRINGS.UI.HUD.STOP_AFK"]=nil
+-- --Обнуляем іх, чтобы оні не перевелісь, і сервер всегда пісал на англійском
+-- ru["STRINGS.UI.NOTIFICATION.LEFTGAME"]=nil
+-- ru["STRINGS.UI.NOTIFICATION.JOINEDGAME"]=nil
+-- ru["STRINGS.UI.NOTIFICATION.KICKEDFROMGAME"]=nil
+-- ru["STRINGS.UI.NOTIFICATION.BANNEDFROMGAME"]=nil
+-- --ru["STRINGS.UI.NOTIFICATION.NEW_SKIN_ANNOUNCEMENT"]=nil
+-- ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1"]=nil
+-- ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_MALE"]=nil
+-- ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_FEMALE"]=nil
+-- ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_ROBOT"]=nil
+-- ru["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_DEFAULT"]=nil
+-- ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_MALE"]=nil
+-- ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_FEMALE"]=nil
+-- ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_ROBOT"]=nil
+-- ru["STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_DEFAULT"]=nil
+-- ru["STRINGS.UI.HUD.REZ_ANNOUNCEMENT"]=nil
+-- ru["STRINGS.UI.HUD.START_AFK"]=nil
+-- ru["STRINGS.UI.HUD.STOP_AFK"]=nil
 
 -- Загружаем спіч
 require("blr_speech")
@@ -1038,19 +1037,19 @@ function GetSkinUsableOnString(item_type, popup_txt)
 
 	local usable_on_str
 	if skin_data ~= nil and skin_data.base_prefab ~= nil then
-        local item1_str, item2_str, item3_str
-        item1_str = t.RussianNames[STRINGS.NAMES[string.upper(skin_data.base_prefab)]] and t.RussianNames[STRINGS.NAMES[string.upper(skin_data.base_prefab)]]["RESKIN"] or rebuildname(STRINGS.NAMES[string.upper(skin_data.base_prefab)], "reskin", string.upper(skin_data.base_prefab))
+		local item1_str, item2_str, item3_str
+		item1_str = t.BelarusianNames[STRINGS.NAMES[string.upper(skin_data.base_prefab)]] and t.BelarusianNames[STRINGS.NAMES[string.upper(skin_data.base_prefab)]]["RESKIN"] or rebuildname(STRINGS.NAMES[string.upper(skin_data.base_prefab)], "reskin", string.upper(skin_data.base_prefab))
         if skin_data.granted_items ~= nil then
             local granted_skin_data = GetSkinData(skin_data.granted_items[1])
             if granted_skin_data ~= nil and granted_skin_data.base_prefab ~= nil then
-                item2_str = t.RussianNames[STRINGS.NAMES[string.upper(granted_skin_data.base_prefab)]] and t.RussianNames[STRINGS.NAMES[string.upper(granted_skin_data.base_prefab)]]["RESKIN"] or rebuildname(STRINGS.NAMES[string.upper(granted_skin_data.base_prefab)], "reskin", string.upper(granted_skin_data.base_prefab))
+				item2_str = t.BelarusianNames[STRINGS.NAMES[string.upper(granted_skin_data.base_prefab)]] and t.BelarusianNames[STRINGS.NAMES[string.upper(granted_skin_data.base_prefab)]]["RESKIN"] or rebuildname(STRINGS.NAMES[string.upper(granted_skin_data.base_prefab)], "reskin", string.upper(granted_skin_data.base_prefab))
                 if item2_str == item1_str then
                     item2_str = nil
                 end
             end
             granted_skin_data = GetSkinData(skin_data.granted_items[2])
             if granted_skin_data ~= nil and granted_skin_data.base_prefab ~= nil then
-                item3_str = t.RussianNames[STRINGS.NAMES[string.upper(granted_skin_data.base_prefab)]] and t.RussianNames[STRINGS.NAMES[string.upper(granted_skin_data.base_prefab)]]["RESKIN"] or rebuildname(STRINGS.NAMES[string.upper(granted_skin_data.base_prefab)],"reskin",string.upper(granted_skin_data.base_prefab))
+				item3_str = t.BelarusianNames[STRINGS.NAMES[string.upper(granted_skin_data.base_prefab)]] and t.BelarusianNames[STRINGS.NAMES[string.upper(granted_skin_data.base_prefab)]]["RESKIN"] or rebuildname(STRINGS.NAMES[string.upper(granted_skin_data.base_prefab)],"reskin",string.upper(granted_skin_data.base_prefab))
                 if item2_str == nil and item3_str ~= item1_str then
                     item2_str = item3_str
                     item3_str = nil
@@ -1075,40 +1074,40 @@ require("widgets/eventannouncer")
 --Переопределяем глобальную функцію, формірующую анонс-сообщеніе о смерті
 --Делаем это тут, потому что она объявлена в классе eventannouncer, і не відна до обращенія к этому классу.
 --Тут нам нужно позаботіться об выводе імені убійцы на англійском языке.
-local _GetNewDeathAnnouncementString = GetNewDeathAnnouncementString
-function GetNewDeathAnnouncementString(theDead, source, pkname)
-	local str = _GetNewDeathAnnouncementString(theDead, source, pkname)
-	if TheWorld and not TheWorld.ismastersim then return str end
-	if string.find(str,STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1,1,true) then
-		--еслі ігрок был убіт
-		local capturestring=nil
-		if string.find(str,STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_MALE,1,true) then
-			capturestring="( "..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1.." )(.*)("..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_MALE..")"
-		elseif string.find(str,STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_FEMALE,1,true) then
-			capturestring="( "..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1.." )(.*)("..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_FEMALE..")"
-		elseif string.find(str,STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_ROBOT,1,true) then
-			capturestring="( "..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1.." )(.*)("..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_ROBOT..")"
-		elseif string.find(str,STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_DEFAULT,1,true) then
-			capturestring="( "..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1.." )(.*)("..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_DEFAULT..")"
-		else
-			capturestring="( "..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1.." )(.*)(%.)$"
-		end
-		if capturestring then -- выяснілось, что кто-то убіт
-			local a, killername, b=str:match(capturestring)
-			if killername then
-				killername=t.SpeechHashTbl.NAMES.Rus2Eng[killername] or killername--Переводім на англійскій
-				str=str:gsub(capturestring,"%1"..killername.."%3")
-			end
-		end
-	end
-	return str
-end
+-- local _GetNewDeathAnnouncementString = GetNewDeathAnnouncementString
+-- function GetNewDeathAnnouncementString(theDead, source, pkname)
+-- 	local str = _GetNewDeathAnnouncementString(theDead, source, pkname)
+-- 	if TheWorld and not TheWorld.ismastersim then return str end
+-- 	if string.find(str,STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1,1,true) then
+-- 		--еслі ігрок был убіт
+-- 		local capturestring=nil
+-- 		if string.find(str,STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_MALE,1,true) then
+-- 			capturestring="( "..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1.." )(.*)("..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_MALE..")"
+-- 		elseif string.find(str,STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_FEMALE,1,true) then
+-- 			capturestring="( "..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1.." )(.*)("..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_FEMALE..")"
+-- 		elseif string.find(str,STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_ROBOT,1,true) then
+-- 			capturestring="( "..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1.." )(.*)("..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_ROBOT..")"
+-- 		elseif string.find(str,STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_DEFAULT,1,true) then
+-- 			capturestring="( "..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1.." )(.*)("..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_DEFAULT..")"
+-- 		else
+-- 			capturestring="( "..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1.." )(.*)(%.)$"
+-- 		end
+-- 		if capturestring then -- выяснілось, что кто-то убіт
+-- 			local a, killername, b=str:match(capturestring)
+-- 			if killername then
+-- 				killername=t.SpeechHashTbl.NAMES.Be2Eng[killername] or killername--Переводім на англійскій
+-- 				str=str:gsub(capturestring,"%1"..killername.."%3")
+-- 			end
+-- 		end
+-- 	end
+-- 	return str
+-- end
 --Сообщеніе о том, что кто-то был ожівлён. Тут нужно подменіть на англійскій істочнік ожівленія
-local _GetNewRezAnnouncementString = GetNewRezAnnouncementString
-function GetNewRezAnnouncementString(theRezzed, source, ...)
-	source = source and (t.SpeechHashTbl.NAMES.Rus2Eng[source] or source) --Переводім імя на англійскій
-	return _GetNewRezAnnouncementString(theRezzed, source, ...)
-end
+-- local _GetNewRezAnnouncementString = GetNewRezAnnouncementString
+-- function GetNewRezAnnouncementString(theRezzed, source, ...)
+-- 	source = source and (t.SpeechHashTbl.NAMES.Be2Eng[source] or source) --Переводім імя на англійскій
+-- 	return _GetNewRezAnnouncementString(theRezzed, source, ...)
+-- end
 
 --Подбірает сообщеніе із хеш-табліц по указанному персонажу і сообщенію на англійском.
 --Еслі персонаж не указан, іспользуется уілсон.
@@ -1163,7 +1162,7 @@ function t.GetFromSpeechesHash(message, char)
 end
 
 local function GetMentioned1(message)
-	for i,v in pairs(t.SpeechHashTbl.GOATMUM_CRAVING_HINTS.Eng2Rus) do
+	for i,v in pairs(t.SpeechHashTbl.GOATMUM_CRAVING_HINTS.Eng2Be) do
 		local regex=string.gsub(i,"%.","%%.")
 		regex=string.gsub(regex,"{craving}","(.-)")
 		regex=string.gsub(regex,"{part2}","(.+)")
@@ -1233,8 +1232,8 @@ end
 --Переводіт сообщеніе на русскій, пользуясь хеш-табліцамі
 --message - сообщеніе на англійском
 --entity - ссылка на говорящего это сообщеніе персонажа
-function t.TranslateToRussian(message, entity)
-	t.print("t.TranslateToRussian", message, entity.prefab)
+function t.TranslateToBelarusian(message, entity)
+	t.print("t.TranslateToBelarusian", message, entity.prefab)
 
 	if not (entity and entity.prefab and entity.components.talker and type(message)=="string") then return message end
 
@@ -1255,8 +1254,8 @@ function t.TranslateToRussian(message, entity)
 	end
 
 	if entity.prefab == "quagmire_goatmum" then
-		if t.SpeechHashTbl.GOATMUM_WELCOME_INTRO.Eng2Rus[message] then
-			return t.SpeechHashTbl.GOATMUM_WELCOME_INTRO.Eng2Rus[message]
+		if t.SpeechHashTbl.GOATMUM_WELCOME_INTRO.Eng2Be[message] then
+			return t.SpeechHashTbl.GOATMUM_WELCOME_INTRO.Eng2Be[message]
 		end
 
 		local NotTranslated=message
@@ -1267,9 +1266,9 @@ function t.TranslateToRussian(message, entity)
 		local part2
 		local craving
 		if mentions and #mentions>0 and mentions[1] then
-			craving=t.SpeechHashTbl.GOATMUM_CRAVING_MAP.Eng2Rus[mentions[1]]
+			craving=t.SpeechHashTbl.GOATMUM_CRAVING_MAP.Eng2Be[mentions[1]]
 			if #mentions>1 then
-				part2=t.SpeechHashTbl.GOATMUM_CRAVING_HINTS_PART2.Eng2Rus[mentions[2]]
+				part2=t.SpeechHashTbl.GOATMUM_CRAVING_HINTS_PART2.Eng2Be[mentions[2]]
 			end
 			if  #mentions==1 and craving then
 				message=string.format(message,craving)
@@ -1279,18 +1278,18 @@ function t.TranslateToRussian(message, entity)
 		end
 		return message
 	elseif entity.prefab == "monkeyqueen" then -- реплікі Королевы лунной прістані
-		if t.SpeechHashTbl.MONKEY_QUEEN.Eng2Rus[message] then
-			message = t.SpeechHashTbl.MONKEY_QUEEN.Eng2Rus[message] or message
+		if t.SpeechHashTbl.MONKEY_QUEEN.Eng2Be[message] then
+			message = t.SpeechHashTbl.MONKEY_QUEEN.Eng2Be[message] or message
 		end
 	elseif entity.prefab == "mermking" then -- реплікі Короля мэрмов
-		if t.SpeechHashTbl.MERM_KING.Eng2Rus[message] then
-			message = t.SpeechHashTbl.MERM_KING.Eng2Rus[message] or message
+		if t.SpeechHashTbl.MERM_KING.Eng2Be[message] then
+			message = t.SpeechHashTbl.MERM_KING.Eng2Be[message] or message
 		end
 	end
 
 	-- осмотр надгробій	
-	if t.SpeechHashTbl.EPITAPHS.Eng2Rus[message] then
-		message = t.SpeechHashTbl.EPITAPHS.Eng2Rus[message] or message
+	if t.SpeechHashTbl.EPITAPHS.Eng2Be[message] then
+		message = t.SpeechHashTbl.EPITAPHS.Eng2Be[message] or message
 	end
 
 	local ent = entity
@@ -1320,7 +1319,7 @@ function t.TranslateToRussian(message, entity)
 				end
 				mentions[2]=killerkey and STRINGS.NAMES[killerkey] or mentions[2]
 				if killerkey then
-					mentions[2]=t.RussianNames[mentions[2]] and t.RussianNames[mentions[2]]["KILL"] or rebuildname(mentions[2],"KILL",killerkey) or mentions[2]
+					mentions[2]=t.BelarusianNames[mentions[2]] and t.BelarusianNames[mentions[2]]["KILL"] or rebuildname(mentions[2],"KILL",killerkey) or mentions[2]
 					if not t.ShouldBeCapped[killerkey:lower()] and not table.contains(GetActiveCharacterList(), killerkey:lower()) then
 						mentions[2]=firsttolower(mentions[2])
 					end
@@ -1336,7 +1335,7 @@ function t.TranslateToRussian(message, entity)
 		--Подставляем імена, еслі оні есть
 		message=string.format(message, unpack(mentions or {"","","",""}))
 		if entity=="WX78" then
-			message=russianupper(message) or message
+			message=belarusianupper(message) or message
 		end
 		return message
 	end
@@ -1379,190 +1378,190 @@ function t.TranslateToRussian(message, entity)
 	return message
 end
 
---Перевод сообщенія на русскій на стороне кліента
-local _Networking_Talk = Networking_Talk
-function Networking_Talk(guid, message, ...)
-	local entity = Ents[guid]
-	t.print("Networking_Talk", entity, message)
-	message = t.TranslateToRussian(message, entity) or message --Переводім на русскій
-	return _Networking_Talk(guid, message, ...)
-end
+-- --Перевод сообщенія на русскій на стороне кліента
+-- local _Networking_Talk = Networking_Talk
+-- function Networking_Talk(guid, message, ...)
+-- 	local entity = Ents[guid]
+-- 	t.print("Networking_Talk", entity, message)
+-- 	message = t.TranslateToBelarusian(message, entity) or message --Переводім на русскій
+-- 	return _Networking_Talk(guid, message, ...)
+-- end
 
 -- ісправленіе умлаутов Вігфрід в чате
 local _Networking_Say = Networking_Say
 function Networking_Say(guid, userid, name, prefab, message, ...)
 	if prefab=="wathgrithr" and Profile:IsWathgrithrFontEnabled() then
-		message = message:gsub("о","ö"):gsub("О","Ö") or message
+		message = message:gsub("о","ö"):gsub("О","Ö"):gsub("O","Ö"):gsub("o","ö") or message
 	end
 	return _Networking_Say(guid, userid, name, prefab, message, ...)
 end
 
---Перевод на русскій проізносімого на сервере
-local _Talker = NetworkProxy.Talker
-NetworkProxy.Talker = function(self, message, entity, ...)
-	t.print("entity", entity)
-	local inst = entity and entity:GetGUID() or nil
-	inst = inst and Ents[inst] or nil --определяем інстанс персонажа по entity
+-- --Перевод на русскій проізносімого на сервере
+-- local _Talker = NetworkProxy.Talker
+-- NetworkProxy.Talker = function(self, message, entity, ...)
+-- 	t.print("entity", entity)
+-- 	local inst = entity and entity:GetGUID() or nil
+-- 	inst = inst and Ents[inst] or nil --определяем інстанс персонажа по entity
 
-	if inst and message then
-		message = t.TranslateToRussian(message, inst) or message --переводім
-	end
+-- 	if inst and message then
+-- 		message = t.TranslateToBelarusian(message, inst) or message --переводім
+-- 	end
 
-	return _Talker(self, message, entity, ...)
-end
+-- 	return _Talker(self, message, entity, ...)
+-- end
 
 --Сообщенія о событіях в ігре
-AddClassPostConstruct("widgets/eventannouncer", function(self)
-	--Вывод любых анонсов на экран. Тут подменяем все нестандартные фразы, і не только
-	local _ShowNewAnnouncement = self.ShowNewAnnouncement
-	if _ShowNewAnnouncement then function self:ShowNewAnnouncement(announcement, ...)
+-- AddClassPostConstruct("widgets/eventannouncer", function(self)
+-- 	--Вывод любых анонсов на экран. Тут подменяем все нестандартные фразы, і не только
+-- 	local _ShowNewAnnouncement = self.ShowNewAnnouncement
+-- 	if _ShowNewAnnouncement then function self:ShowNewAnnouncement(announcement, ...)
 
-		local gender, player, RussianMessage, name, name2, killerkey
+-- 		local gender, player, BelarusianMessage, name, name2, killerkey
 
-		local function test(adder1,msg1,rusmsg1,adder2,msg2,rusmsg2,ending)
-			--print("Test:", tostring(adder1), tostring(msg1), tostring(rusmsg1), tostring(adder2), tostring(msg2), tostring(rusmsg2), tostring(ending))
-			if name or name2 then return end
-			msg1=msg1 and msg1:gsub("([.%-?])","%%%1"):gsub("%%s","(.*)") or ""
-			msg2=msg2 and msg2:gsub("([.%-?])","%%%1"):gsub("%%s","(.*)") or ""
-			name, name2=announcement:match((adder1 or "")..msg1..(adder2 or "")..msg2)
-			if name then RussianMessage=rusmsg1 end
-			if adder2 and name and name2 and rusmsg2 then RussianMessage=RussianMessage..rusmsg2 end
-			if ending and RussianMessage then RussianMessage=RussianMessage..ending end
-		end
-		--Проверяем голосованія
---			test(nil,STRINGS.VOTING.KICK.START, announcerus.VOTINGKICKSTART)
---			test(nil,STRINGS.VOTING.KICK.SUCCESS, announcerus.VOTINGKICKSUCCESS)
---			test(nil,STRINGS.VOTING.KICK.FAILURE, announcerus.VOTINGKICKFAILURE)
-		--Прісоедіненіе/Отсоедіненіе
---		--C 176665 в этіх двух ізначально есть %s
---		test("(.*) ",STRINGS.UI.NOTIFICATION.JOINEDGAME, announcerus.JOINEDGAME)
---		test("(.*) ",STRINGS.UI.NOTIFICATION.LEFTGAME, announcerus.LEFTGAME)
-		test(nil,STRINGS.UI.NOTIFICATION.JOINEDGAME, announcerus.JOINEDGAME)
-		test(nil,STRINGS.UI.NOTIFICATION.LEFTGAME, announcerus.LEFTGAME)
-		--Кік/Бан
-		test(nil,STRINGS.UI.NOTIFICATION.KICKEDFROMGAME, announcerus.KICKEDFROMGAME)
-		test(nil,STRINGS.UI.NOTIFICATION.BANNEDFROMGAME, announcerus.BANNEDFROMGAME)
+-- 		local function test(adder1,msg1,rusmsg1,adder2,msg2,rusmsg2,ending)
+-- 			--print("Test:", tostring(adder1), tostring(msg1), tostring(rusmsg1), tostring(adder2), tostring(msg2), tostring(rusmsg2), tostring(ending))
+-- 			if name or name2 then return end
+-- 			msg1=msg1 and msg1:gsub("([.%-?])","%%%1"):gsub("%%s","(.*)") or ""
+-- 			msg2=msg2 and msg2:gsub("([.%-?])","%%%1"):gsub("%%s","(.*)") or ""
+-- 			name, name2=announcement:match((adder1 or "")..msg1..(adder2 or "")..msg2)
+-- 			if name then BelarusianMessage=rusmsg1 end
+-- 			if adder2 and name and name2 and rusmsg2 then BelarusianMessage=BelarusianMessage..rusmsg2 end
+-- 			if ending and BelarusianMessage then BelarusianMessage=BelarusianMessage..ending end
+-- 		end
+-- 		--Проверяем голосованія
+-- --			test(nil,STRINGS.VOTING.KICK.START, announcerus.VOTINGKICKSTART)
+-- --			test(nil,STRINGS.VOTING.KICK.SUCCESS, announcerus.VOTINGKICKSUCCESS)
+-- --			test(nil,STRINGS.VOTING.KICK.FAILURE, announcerus.VOTINGKICKFAILURE)
+-- 		--Прісоедіненіе/Отсоедіненіе
+-- --		--C 176665 в этіх двух ізначально есть %s
+-- --		test("(.*) ",STRINGS.UI.NOTIFICATION.JOINEDGAME, announcerus.JOINEDGAME)
+-- --		test("(.*) ",STRINGS.UI.NOTIFICATION.LEFTGAME, announcerus.LEFTGAME)
+-- 		test(nil,STRINGS.UI.NOTIFICATION.JOINEDGAME, announcerus.JOINEDGAME)
+-- 		test(nil,STRINGS.UI.NOTIFICATION.LEFTGAME, announcerus.LEFTGAME)
+-- 		--Кік/Бан
+-- 		test(nil,STRINGS.UI.NOTIFICATION.KICKEDFROMGAME, announcerus.KICKEDFROMGAME)
+-- 		test(nil,STRINGS.UI.NOTIFICATION.BANNEDFROMGAME, announcerus.BANNEDFROMGAME)
 
-		-- Даем возможность модам переводіть аннонсы
-		for eng, rus in pairs(t.mod_announce) do
-			test(nil, eng, rus)
-		end
+-- 		-- Даем возможность модам переводіть аннонсы
+-- 		for eng, rus in pairs(t.mod_announce) do
+-- 			test(nil, eng, rus)
+-- 		end
 
-		--Новый скін
---		test(nil,STRINGS.UI.NOTIFICATION.NEW_SKIN_ANNOUNCEMENT, announcerus.NEW_SKIN_ANNOUNCEMENT)
-		if not name2 then
-			--Реплікі о смерті
-			test("(.*) ",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1, announcerus.DEATH_ANNOUNCEMENT_1,
-				 " (.*)",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_MALE, announcerus.DEATH_ANNOUNCEMENT_2_MALE)
-			test("(.*) ",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1, announcerus.DEATH_ANNOUNCEMENT_1,
-				 " (.*)",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_FEMALE, announcerus.DEATH_ANNOUNCEMENT_2_FEMALE)
-			test("(.*) ",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1, announcerus.DEATH_ANNOUNCEMENT_1,
-				 " (.*)",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_ROBOT, announcerus.DEATH_ANNOUNCEMENT_2_ROBOT)
-			test("(.*) ",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1, announcerus.DEATH_ANNOUNCEMENT_1,
-				 " (.*)",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_DEFAULT, announcerus.DEATH_ANNOUNCEMENT_2_DEFAULT)
-			test("(.*) ",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1, announcerus.DEATH_ANNOUNCEMENT_1, " (.*)%.$", nil, nil, ".")
-			test("(.*) ",STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_MALE, announcerus.GHOST_DEATH_ANNOUNCEMENT_MALE)
-			test("(.*) ",STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_FEMALE, announcerus.GHOST_DEATH_ANNOUNCEMENT_FEMALE)
-			test("(.*) ",STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_ROBOT, announcerus.GHOST_DEATH_ANNOUNCEMENT_ROBOT)
-			test("(.*) ",STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_DEFAULT, announcerus.GHOST_DEATH_ANNOUNCEMENT_DEFAULT)
-			--Репліка об ожівленіі
-			test("(.*) ",STRINGS.UI.HUD.REZ_ANNOUNCEMENT, announcerus.REZ_ANNOUNCEMENT, " (.*)%.$", nil, nil, ".")
-			if name2 then --Было обнаружено второе імя, і это сообщеніе о смерті/ожівленіі
-				--Переводім імя на русскій, еслі получітся
-				killerkey=t.SpeechHashTbl.NAMES.Eng2Key[name2] --Получаем ключ імені
-				if killerkey then
-					name2=STRINGS.NAMES[killerkey] or STRINGS.NAMES["SHENANIGANS"] --Тут переводім імя на русскій
-					name2=t.RussianNames[name2] and t.RussianNames[name2]["KILL"] or rebuildname(name2,"KILL",killerkey) or name2
-					if not t.ShouldBeCapped[killerkey:lower()] and not table.contains(GetActiveCharacterList(), killerkey:lower()) then
-						name2=firsttolower(name2)
-					end
-					killerkey=killerkey:lower()
-					if table.contains(GetActiveCharacterList(), killerkey) then killerkey=nil end
-				end
-			end
-		end
-		if name and RussianMessage then
-			announcement = string.format((t.ParseTranslationTags(RussianMessage, "wilson", "announce", killerkey)), name or "", name2 or "", "" ,"") or announcement
-		end
-		return _ShowNewAnnouncement(self, announcement, ...)
-	end end
-end) -- для AddClassPostConstruct "widgets/eventannouncer"
+-- 		--Новый скін
+-- --		test(nil,STRINGS.UI.NOTIFICATION.NEW_SKIN_ANNOUNCEMENT, announcerus.NEW_SKIN_ANNOUNCEMENT)
+-- 		if not name2 then
+-- 			--Реплікі о смерті
+-- 			test("(.*) ",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1, announcerus.DEATH_ANNOUNCEMENT_1,
+-- 				 " (.*)",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_MALE, announcerus.DEATH_ANNOUNCEMENT_2_MALE)
+-- 			test("(.*) ",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1, announcerus.DEATH_ANNOUNCEMENT_1,
+-- 				 " (.*)",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_FEMALE, announcerus.DEATH_ANNOUNCEMENT_2_FEMALE)
+-- 			test("(.*) ",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1, announcerus.DEATH_ANNOUNCEMENT_1,
+-- 				 " (.*)",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_ROBOT, announcerus.DEATH_ANNOUNCEMENT_2_ROBOT)
+-- 			test("(.*) ",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1, announcerus.DEATH_ANNOUNCEMENT_1,
+-- 				 " (.*)",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_DEFAULT, announcerus.DEATH_ANNOUNCEMENT_2_DEFAULT)
+-- 			test("(.*) ",STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1, announcerus.DEATH_ANNOUNCEMENT_1, " (.*)%.$", nil, nil, ".")
+-- 			test("(.*) ",STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_MALE, announcerus.GHOST_DEATH_ANNOUNCEMENT_MALE)
+-- 			test("(.*) ",STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_FEMALE, announcerus.GHOST_DEATH_ANNOUNCEMENT_FEMALE)
+-- 			test("(.*) ",STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_ROBOT, announcerus.GHOST_DEATH_ANNOUNCEMENT_ROBOT)
+-- 			test("(.*) ",STRINGS.UI.HUD.GHOST_DEATH_ANNOUNCEMENT_DEFAULT, announcerus.GHOST_DEATH_ANNOUNCEMENT_DEFAULT)
+-- 			--Репліка об ожівленіі
+-- 			test("(.*) ",STRINGS.UI.HUD.REZ_ANNOUNCEMENT, announcerus.REZ_ANNOUNCEMENT, " (.*)%.$", nil, nil, ".")
+-- 			if name2 then --Было обнаружено второе імя, і это сообщеніе о смерті/ожівленіі
+-- 				--Переводім імя на русскій, еслі получітся
+-- 				killerkey=t.SpeechHashTbl.NAMES.Eng2Key[name2] --Получаем ключ імені
+-- 				if killerkey then
+-- 					name2=STRINGS.NAMES[killerkey] or STRINGS.NAMES["SHENANIGANS"] --Тут переводім імя на русскій
+-- 					name2=t.BelarusianNames[name2] and t.BelarusianNames[name2]["KILL"] or rebuildname(name2,"KILL",killerkey) or name2
+-- 					if not t.ShouldBeCapped[killerkey:lower()] and not table.contains(GetActiveCharacterList(), killerkey:lower()) then
+-- 						name2=firsttolower(name2)
+-- 					end
+-- 					killerkey=killerkey:lower()
+-- 					if table.contains(GetActiveCharacterList(), killerkey) then killerkey=nil end
+-- 				end
+-- 			end
+-- 		end
+-- 		if name and BelarusianMessage then
+-- 			announcement = string.format((t.ParseTranslationTags(BelarusianMessage, "wilson", "announce", killerkey)), name or "", name2 or "", "" ,"") or announcement
+-- 		end
+-- 		return _ShowNewAnnouncement(self, announcement, ...)
+-- 	end end
+-- end) -- для AddClassPostConstruct "widgets/eventannouncer"
 
 --Тут мы должны переделать опісаніе скелета, чтобы в него не попал русскій
 -- Жуть какая. Столько кода просто для перевода скелета
-AddPrefabPostInit("skeleton_player", function(inst)
-	local function reassignfn(inst) --функція переопределяет функцію. Туповато, но менять лень
-		inst.components.inspectable.Oldgetspecialdescription=inst.components.inspectable.getspecialdescription
-		function inst.components.inspectable.getspecialdescription(inst, viewer, ...)
-			local oldGetDescription=GetDescription
-			GetDescription=function(viewer1, inst1, tag)
-				local ret=oldGetDescription(viewer1, inst1, tag)
-				ret=t.ParseTranslationTags(ret, inst1.cause, nil, nil)
-				return ret
-			end
-			local message=inst.components.inspectable.Oldgetspecialdescription(inst, viewer, ...)
-			GetDescription=oldGetDescription
-			if not message then return message end
+-- AddPrefabPostInit("skeleton_player", function(inst)
+-- 	local function reassignfn(inst) --функція переопределяет функцію. Туповато, но менять лень
+-- 		inst.components.inspectable.Oldgetspecialdescription=inst.components.inspectable.getspecialdescription
+-- 		function inst.components.inspectable.getspecialdescription(inst, viewer, ...)
+-- 			local oldGetDescription=GetDescription
+-- 			GetDescription=function(viewer1, inst1, tag)
+-- 				local ret=oldGetDescription(viewer1, inst1, tag)
+-- 				ret=t.ParseTranslationTags(ret, inst1.cause, nil, nil)
+-- 				return ret
+-- 			end
+-- 			local message=inst.components.inspectable.Oldgetspecialdescription(inst, viewer, ...)
+-- 			GetDescription=oldGetDescription
+-- 			if not message then return message end
 
-			local player=ThePlayer
-			local key=player and player.prefab:upper() or "GENERIC"
---				local key=inst.char:upper()
-			local deadgender=GetGenderStrings(inst.char)
-			local m=STRINGS.CHARACTERS[key] and STRINGS.CHARACTERS[key].DESCRIBE and STRINGS.CHARACTERS[key].DESCRIBE.SKELETON_PLAYER and STRINGS.CHARACTERS[key].DESCRIBE.SKELETON_PLAYER[deadgender] or STRINGS.CHARACTERS.GENERIC.DESCRIBE.SKELETON_PLAYER[deadgender]
-			m=t.ParseTranslationTags(m, inst.cause, nil, nil)
-			if not m then return message end
-			local dead,killer=string.match(message,(string.gsub(m,"%%s","(.*)"))) --вытасківаем імена із сообщенія
-			if not (m and dead and killer) then return message end
+-- 			local player=ThePlayer
+-- 			local key=player and player.prefab:upper() or "GENERIC"
+-- --				local key=inst.char:upper()
+-- 			local deadgender=GetGenderStrings(inst.char)
+-- 			local m=STRINGS.CHARACTERS[key] and STRINGS.CHARACTERS[key].DESCRIBE and STRINGS.CHARACTERS[key].DESCRIBE.SKELETON_PLAYER and STRINGS.CHARACTERS[key].DESCRIBE.SKELETON_PLAYER[deadgender] or STRINGS.CHARACTERS.GENERIC.DESCRIBE.SKELETON_PLAYER[deadgender]
+-- 			m=t.ParseTranslationTags(m, inst.cause, nil, nil)
+-- 			if not m then return message end
+-- 			local dead,killer=string.match(message,(string.gsub(m,"%%s","(.*)"))) --вытасківаем імена із сообщенія
+-- 			if not (m and dead and killer) then return message end
 
-			dead=inst.playername or t.SpeechHashTbl.NAMES.Rus2Eng[dead] or dead --переводім на англійскій імя убітого
-			if t.SpeechHashTbl.NAMES.Rus2Eng[killer] and inst.pkname == nil then
-				local mentions=t.SpeechHashTbl.NAMES.Rus2Eng[killer]
-				local killerkey=t.SpeechHashTbl.NAMES.Eng2Key[mentions] --Получаем ключ імені убійцы
-				t.print("[BLR DEBUG] 2302 "..killerkey)
+-- 			dead=inst.playername or t.SpeechHashTbl.NAMES.Be2Eng[dead] or dead --переводім на англійскій імя убітого
+-- 			if t.SpeechHashTbl.NAMES.Be2Eng[killer] and inst.pkname == nil then
+-- 				local mentions=t.SpeechHashTbl.NAMES.Be2Eng[killer]
+-- 				local killerkey=t.SpeechHashTbl.NAMES.Eng2Key[mentions] --Получаем ключ імені убійцы
+-- 				t.print("[BLR DEBUG] 2302 "..killerkey)
 
-				if not killerkey and key=="WX78" then --тут только полный перебор, т.к. он говоріт всё в верхнем регістре
-					for eng, key in pairs(t.SpeechHashTbl.NAMES.Eng2Key) do
-						if eng:upper()==mentions then killerkey = key break end
-					end
-				end
+-- 				if not killerkey and key=="WX78" then --тут только полный перебор, т.к. он говоріт всё в верхнем регістре
+-- 					for eng, key in pairs(t.SpeechHashTbl.NAMES.Eng2Key) do
+-- 						if eng:upper()==mentions then killerkey = key break end
+-- 					end
+-- 				end
 
-				mentions=killerkey and STRINGS.NAMES[killerkey] or mentions
-				if killerkey then
-					mentions=t.RussianNames[mentions] and t.RussianNames[mentions]["KILL"] or rebuildname(mentions,"KILL",killerkey) or mentions
-					if not t.ShouldBeCapped[killerkey:lower()] and not table.contains(GetActiveCharacterList(), killerkey:lower()) then
-						mentions=firsttolower(mentions)
-					end
+-- 				mentions=killerkey and STRINGS.NAMES[killerkey] or mentions
+-- 				if killerkey then
+-- 					mentions=t.BelarusianNames[mentions] and t.BelarusianNames[mentions]["KILL"] or rebuildname(mentions,"KILL",killerkey) or mentions
+-- 					if not t.ShouldBeCapped[killerkey:lower()] and not table.contains(GetActiveCharacterList(), killerkey:lower()) then
+-- 						mentions=firsttolower(mentions)
+-- 					end
 
-					killerkey=killerkey:lower()
-					if table.contains(GetActiveCharacterList(), killerkey) then
-						killerkey=nil
-					end
-				end
+-- 					killerkey=killerkey:lower()
+-- 					if table.contains(GetActiveCharacterList(), killerkey) then
+-- 						killerkey=nil
+-- 					end
+-- 				end
 
-				killer=mentions
-			else
-				killer=t.SpeechHashTbl.NAMES.Rus2Eng[killer] or killer --Переводім на англійскій імя убійцы
-			end
+-- 				killer=mentions
+-- 			else
+-- 				killer=t.SpeechHashTbl.NAMES.Be2Eng[killer] or killer --Переводім на англійскій імя убійцы
+-- 			end
 
-			message=string.format(m,dead,killer)
-			return message
-		end
-	end
-	if inst.SetSkeletonDescription and not inst.OldSetSkeletonDescription then
-		inst.OldSetSkeletonDescription=inst.SetSkeletonDescription
-		function inst.SetSkeletonDescription(inst, ...)
-			inst.OldSetSkeletonDescription(inst, ...)
-			reassignfn(inst)
-		end
-	end
-	if inst.OnLoad and not inst.OldOnLoad then
-		inst.OldOnLoad=inst.OnLoad
-		function inst.OnLoad(inst, ...)
-			inst.OldOnLoad(inst, ...)
-			reassignfn(inst)
-		end
-	end
-end)
+-- 			message=string.format(m,dead,killer)
+-- 			return message
+-- 		end
+-- 	end
+-- 	if inst.SetSkeletonDescription and not inst.OldSetSkeletonDescription then
+-- 		inst.OldSetSkeletonDescription=inst.SetSkeletonDescription
+-- 		function inst.SetSkeletonDescription(inst, ...)
+-- 			inst.OldSetSkeletonDescription(inst, ...)
+-- 			reassignfn(inst)
+-- 		end
+-- 	end
+-- 	if inst.OnLoad and not inst.OldOnLoad then
+-- 		inst.OldOnLoad=inst.OnLoad
+-- 		function inst.OnLoad(inst, ...)
+-- 			inst.OldOnLoad(inst, ...)
+-- 			reassignfn(inst)
+-- 		end
+-- 	end
+-- end)
 
 --Тут мы должны перехватывать названіе предмета у blueprint і переводіть на англійскій
 -- TODO: проверіть работу AddPrefabPostInit
@@ -1571,7 +1570,7 @@ AddPrefabPostInit("blueprint", function(inst)
 		if inst.recipetouse then
 			local name = STRINGS.NAMES[string.upper(inst.recipetouse)] or STRINGS.NAMES[inst.recipetouse]
 			if name then
-				name = t.SpeechHashTbl.NAMES.Rus2Eng[name] or name
+				name = t.SpeechHashTbl.NAMES.Be2Eng[name] or name
 				inst.components.named:SetName(name.." Blueprint")
 			end
 		end
@@ -1580,7 +1579,7 @@ AddPrefabPostInit("blueprint", function(inst)
 		inst.OldOnLoad=inst.OnLoad
 		function inst.OnLoad(inst, data)
 			if data and data.recipetouse and not STRINGS.NAMES[string.upper(data.recipetouse)] then
-				STRINGS.NAMES[string.upper(data.recipetouse)]="Предмет із отключённого мода"
+				STRINGS.NAMES[string.upper(data.recipetouse)]="Прадмет з адключанай мадыфікаці"
 				inst.OldOnLoad(inst, data)
 				STRINGS.NAMES[string.upper(data.recipetouse)]=nil
 			else
@@ -1709,38 +1708,10 @@ do
 			if self.age and data.playerage then
 				local newstr=self.age:GetString()
 				newstr = newstr:gsub("Пражыта", StringTime(data.playerage, {"Пражыты", "Пражыта", "Пражыта"}),1)
-				self.age:SetString(newstr:gsub("Дней", StringTime(data.playerage),1))
+				self.age:SetString(newstr:gsub("Дзён", StringTime(data.playerage),1))
 			end
 		end
 	end)
-
-	--Переводім названія дней неделі
-	-- неактуально? 10/2023
-	--[[local _ListSnapshots = NetworkProxy.ListSnapshots
-	NetworkProxy.ListSnapshots = function(self, ...)
-		local lis t =_ListSnapshots(self, ...) or {}
-		if list and #list>0 and list[1].timestamp then
-			local daysofweek={"Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"}
-			local rusdaysofweek={"Понедельнік","Вторнік","Среда","Четверг","Пятніца","Суббота","Воскресенье"}
-			local rusdaysofweek3={"Пнд","Втр","Срд","Чтв","Птн","Сбт","Вск"}
-			for _,v in ipairs(list) do
-				for ii,vv in ipairs(daysofweek) do
-					if string.sub(v.timestamp,1,#vv):lower()==vv:lower() then
-						v.timestamp=rusdaysofweek[ii]..string.sub(v.timestamp,#vv+1)
-						break
-					elseif string.sub(v.timestamp,1,3):lower()==string.sub(vv,1,3):lower() then
-						v.timestamp=rusdaysofweek3[ii]..string.sub(v.timestamp,4)
-						break
-					elseif string.sub(v.timestamp,1,2):lower()==string.sub(vv,1,2):lower() then
-						v.timestamp=string.sub(rusdaysofweek3[ii],1,2)..string.sub(v.timestamp,3)
-						break
-					end
-
-				end
-			end
-		end
-		return list
-	end]]
 
 	--Окно просмотра серверов, двігаем контролсы, ісправляем надпісі
 	local function ServerListingScreenPost1(self)
@@ -1764,15 +1735,15 @@ do
 					local int = str:match(checkstr)
 					if int and intentions[int] then
 						if intentions[int]=="SOCIAL" then
-							str = "Дружескіе сервера"
+							str = "Сяброўскія серверы"
 						elseif intentions[int]=="COOPERATIVE" then
-							str = "Командные сервера"
+							str = "Камандныя серверы"
 						elseif intentions[int]=="COMPETITIVE" then
-							str = "Соревновательные сервера"
+							str = "Спаборныя серверы"
 						elseif intentions[int]=="MADNESS" then
-							str = "Сервера тіпа «Безуміе»"
+							str = "«Шалёныя» серверы"
 						elseif intentions[int]=="ANY" then
-							str = "Сервера всех стілей"
+							str = "Серверы ўсіх стыляў"
 						end
 					end
 				end
@@ -1789,11 +1760,11 @@ do
 			local OldSetString = self.season_description.text.SetString
 			if OldSetString then
 				function self.season_description.text:SetString(str, ...)
-					if str:find("Лето")~=nil then
+					if str:find("Лета")~=nil then
 						if str:find("Ранняя")~=nil then
-							str=str:gsub("Ранняя","Раннее")
-						elseif str:find("Поздняя")~=nil then
-							str=str:gsub("Поздняя","Позднее")
+							str=str:gsub("Ранняя","Ранняе")
+						elseif str:find("Позняя")~=nil then
+							str=str:gsub("Позняя","Позняе")
 						end
 					end
 					local res = OldSetString(self, str, ...)
@@ -1823,7 +1794,7 @@ do
 						sketch_name = inst.name:gsub("(%a+)%sFigure%sSketch", "%1")
 						sketch_name = "CHESSPIECE_"..sketch_name:gsub(" ", ""):upper()
 						sketch_name = STRINGS.NAMES[sketch_name] or inst.name
-						sketch_name = sketch_name:gsub("Фігура", "Эскіз фігуры")
+						sketch_name = sketch_name:gsub("Фігура", "Накід фігуры")
 					else
 						sketch_name = inst.name:gsub("Фігура", "фігуры")
 					end
@@ -1879,18 +1850,18 @@ do
 			end
 
 			local DayAndSeasonText = self.serverslotscreen:GetDayAndSeasonText(self.slot)
-			if DayAndSeasonText:find("Лето") ~= nil then
+			if DayAndSeasonText:find("Лета") ~= nil then
 				if DayAndSeasonText:find("Ранняя") ~= nil then
-					DayAndSeasonText = DayAndSeasonText:gsub("Ранняя","Раннее")
-				elseif DayAndSeasonText:find("Поздняя") ~= nil then
-					DayAndSeasonText = DayAndSeasonText:gsub("Поздняя","Позднее")
+					DayAndSeasonText = DayAndSeasonText:gsub("Ранняя","Ранняе")
+				elseif DayAndSeasonText:find("Позняя") ~= nil then
+					DayAndSeasonText = DayAndSeasonText:gsub("Позняя","Позняе")
 				end
 			end
-			if DayAndSeasonText:find(" День") ~= nil then
-				DayAndSeasonText = DayAndSeasonText:gsub(" День",", День")
+			if DayAndSeasonText:find(" Дзень") ~= nil then
+				DayAndSeasonText = DayAndSeasonText:gsub(" Дзень",", Дзень")
 			end
 
-			DayAndSeasonText = firsttoupper(russianlower(DayAndSeasonText))
+			DayAndSeasonText = firsttoupper(belarusianlower(DayAndSeasonText))
 
 			self.day_and_season:SetString(DayAndSeasonText)
 		end
@@ -1922,9 +1893,9 @@ do
 		local num_columns = 3
 
 		function self:RefreshOptionItems()			
-			local opts_text = { ["No Day"]="Без дня", ["No Dusk"]="Без вечера", ["No Night"]="Без ночі", ["Long Day"]="Длінный день", 
-							  ["Long Dusk"]="Длінный вечер", ["Long Night"]="Длінная ночь", ["Only Day"]="Только день", 
-							  ["Only Dusk"]="Только вечер", ["Only Night"]="Только ночь", ["Auto"]="Авто", ["Underground"]="Под землёй" }
+			local opts_text = { ["No Day"]="Без дню", ["No Dusk"]="Без вечара", ["No Night"]="Без ночы", ["Long Day"]="Доўгі дзень", 
+							  ["Long Dusk"]="Доўгі вечар", ["Long Night"]="Доўгая ноч", ["Only Day"]="Толькі дзень", 
+							  ["Only Dusk"]="Толькі вечар", ["Only Night"]="Толькі ноч", ["Auto"]="Аўтаматычна", ["Underground"]="Пад зямлёю" }
 
 		    if not self.scroll_list then return end
 		    self.options = self.parent_widget:GetOptions()
@@ -2104,12 +2075,12 @@ AddClassPostConstruct("widgets/skincollector", function(self)
 					for gen, tbl in pairs(t.NamesGender) do
 						if tbl[key:lower()] then gender = gen break end
 					end
-					name = russianlower(name)
+					name = belarusianlower(name)
 				end
 --				text = string.gsub(text, "<item>", name)
 			end
 			if rarity then
-				rarity = russianlower(rarity)
+				rarity = belarusianlower(rarity)
 				text = string.gsub(text, "<rarity>", rarity) --заменім, чтобы парсілісь склоненія (ніже)
 			end
 			--парсім тегі
@@ -2133,13 +2104,34 @@ local function postintentionpicker(self)
 		self.headertext:SetRegionSize(w,h+10)
 	end
 	--Не переводітся. Значіт переводім насільно
-	local intention_options={{text='Дружескій'},{text='Командный'},{text='Агрессівный'},{text='Безуміе'},}
+	local intention_options={{text='Сяброўскі'},{text='Камандны'},{text='Агрэсіўны'},{text='Шалёны'},}
 	for i, v in ipairs(intention_options) do
 		self.buttons[i]:SetText(intention_options[i].text)
 	end
 end
 AddClassPostConstruct("widgets/intentionpicker", postintentionpicker)
 AddClassPostConstruct("widgets/redux/intentionpicker", postintentionpicker)
+
+AddClassPostConstruct("screens/redux/caveselectscreen", function(self)
+	if self.headertext then
+		self.headertext:SetString("З пячорамі ці без пячор?")
+	end
+
+	local srv_desc = {
+		["Play with Caves, requires more PC Power as it runs multiple servers"] = {"З пячорамі", "Сусвет з пячорамі вымагае большых магутнасцяў ПК, бо запускаецца на некалькіх серверах"}, 
+		["Play with no Caves, sad, but not as demanding on a computer"] = {"Без пячор", "Не так весела, але і не настолькі патрабавальна для камп’ютара"}
+	}
+
+	local oldUpdateStyleInfo = self.UpdateStyleInfo
+	function self:UpdateStyleInfo(w)
+		self.description:SetMultilineTruncatedString(srv_desc[w.settings_desc][2], 3, 700, nil, true, true)
+
+		if w.button and w.button.text then
+			w.button.text:SetString(srv_desc[w.settings_desc][1])
+		end
+	end
+	
+end)
 
 --ісправляем жёстко зашітые надпісі на кнопках в контейнерах
 do
@@ -2246,9 +2238,9 @@ end)
 
 do
 	local translations = {
-		["Cancel"] = "Отмена",
-		["Random"] = "Случайно",
-		["Write it!"] = "Напісать!",
+		["Cancel"] = "Скасаваць",
+		["Random"] = "Выпадкова",
+		["Write it!"] = "Напісаць!",
 	}
 
 	AddClassPostConstruct("widgets/writeablewidget", function(self)
@@ -2332,9 +2324,9 @@ AddClassPostConstruct("widgets/serversettingstab", serversettingstabpost)
 
 -- Не показываем настройкі языка. Ультрамегахак
 do
-	local optionsscreen = require("screens/redux/optionsscreen")
-	local __ctor = optionsscreen._ctor
-	optionsscreen._ctor = function(self, prev_screen, ...) print("_ctor") return __ctor(self, nil, ...) end
+	-- local optionsscreen = require("screens/redux/optionsscreen")
+	-- local __ctor = optionsscreen._ctor
+	-- optionsscreen._ctor = function(self, prev_screen, ...) print("_ctor") return __ctor(self, nil, ...) end
 	
 
 	-- ісправленія інтерфейса
@@ -2441,7 +2433,7 @@ AddClassPostConstruct("screens/redux/optionsscreen", function(self)
 	end
 
 	if self.title then
-		self.title.big:SetString("Настройкі ігры")
+		self.title.big:SetString("Параметры гульні")
 	end
 end) 
 
@@ -2451,13 +2443,13 @@ AddClassPostConstruct("screens/redux/scrapbookscreen", function(self)
 		if str ~= nil then
 			if t.PO["STRINGS.SCRAPBOOK.DATA_USES"] and string.match(str,"^(%d*)"..t.PO["STRINGS.SCRAPBOOK.DATA_USES"].."$") then 
 				local splitstr = split(str, " ")
-				str = splitstr[1] .. StringTime(splitstr[1],{" ПРіМЕНЕНіЕ"," ПРіМЕНЕНіЯ"," ПРіМЕНЕНіЙ"}) or str
+				str = splitstr[1] .. StringTime(splitstr[1],{"УЖЫЦЦЕ"," УЖЫЦЦЯ"," УЖЫЦЦЯЎ"}) or str
 			elseif t.PO["STRINGS.SCRAPBOOK.DATA_DAYS"] and string.match(str,"^(%d*)%s"..t.PO["STRINGS.SCRAPBOOK.DATA_DAYS"].."$") then
 				local splitstr = split(str, " ")
-				str = splitstr[1] .. StringTime(splitstr[1],{" ДЕНЬ"," ДНЯ"," ДНЕЙ"}) or str
+				str = splitstr[1] .. StringTime(splitstr[1],{" ДЗЕНЬ"," ДНІ"," ДЗЁН"}) or str
 			elseif t.PO["STRINGS.SCRAPBOOK.DATA_STACK"] and string.match(str,"^(%d*)%s"..t.PO["STRINGS.SCRAPBOOK.DATA_STACK"].."$") then
 				local splitstr = split(str, " ")
-				str = splitstr[1] .. StringTime(splitstr[1],{" ШТУКА"," ШТУКі"," ШТУК"}) or str
+				str = splitstr[1] .. StringTime(splitstr[1],{" ШТУКА"," ШТУКІ"," ШТУК"}) or str
 			end
 
 		    self.string = str
@@ -2488,29 +2480,29 @@ end)
 -- end)
 
 --Не переводітся т.к. табліца создаётся до загрузкі модов.
-AddClassPostConstruct("screens/redux/hostcloudserverpopup", function(self)
-	local phases =
-	{
-		t.PO["STRINGS.UI.FESTIVALEVENTSCREEN.HOST_GETTINGREGIONS"],         -- eRequestingPingServers,
-		t.PO["STRINGS.UI.FESTIVALEVENTSCREEN.HOST_DETERMININGREGION"],      -- eWaitingForPingEndpoints,
-		t.PO["STRINGS.UI.FESTIVALEVENTSCREEN.HOST_DETERMININGREGION"],      -- eReadyToPing,
-		t.PO["STRINGS.UI.FESTIVALEVENTSCREEN.HOST_REQUESTINGSERVER"],       -- eWaitingForPingResults,
-		t.PO["STRINGS.UI.FESTIVALEVENTSCREEN.HOST_REQUESTINGSERVER"],       -- eReadyToRequestServer,
-		t.PO["STRINGS.UI.FESTIVALEVENTSCREEN.HOST_WAITINGFORWORLD"],        -- eWaitingForServer,
-		t.PO["STRINGS.UI.FESTIVALEVENTSCREEN.HOST_CONNECTINGTOSERVER"],     -- eServerReady,
-	}
+-- AddClassPostConstruct("screens/redux/hostcloudserverpopup", function(self)
+-- 	local phases =
+-- 	{
+-- 		t.PO["STRINGS.UI.FESTIVALEVENTSCREEN.HOST_GETTINGREGIONS"],         -- eRequestingPingServers,
+-- 		t.PO["STRINGS.UI.FESTIVALEVENTSCREEN.HOST_DETERMININGREGION"],      -- eWaitingForPingEndpoints,
+-- 		t.PO["STRINGS.UI.FESTIVALEVENTSCREEN.HOST_DETERMININGREGION"],      -- eReadyToPing,
+-- 		t.PO["STRINGS.UI.FESTIVALEVENTSCREEN.HOST_REQUESTINGSERVER"],       -- eWaitingForPingResults,
+-- 		t.PO["STRINGS.UI.FESTIVALEVENTSCREEN.HOST_REQUESTINGSERVER"],       -- eReadyToRequestServer,
+-- 		t.PO["STRINGS.UI.FESTIVALEVENTSCREEN.HOST_WAITINGFORWORLD"],        -- eWaitingForServer,
+-- 		t.PO["STRINGS.UI.FESTIVALEVENTSCREEN.HOST_CONNECTINGTOSERVER"],     -- eServerReady,
+-- 	}
 
-	local _OnUpdate = self.OnUpdate or function(...) end
-	function self:OnUpdate(dt)
-		_OnUpdate(self, dt)
+-- 	local _OnUpdate = self.OnUpdate or function(...) end
+-- 	function self:OnUpdate(dt)
+-- 		_OnUpdate(self, dt)
 
-		local cloudServerRequestState = TheNet:GetCloudServerRequestState() or 0
+-- 		local cloudServerRequestState = TheNet:GetCloudServerRequestState() or 0
 
-		if cloudServerRequestState >= 8 then return end
+-- 		if cloudServerRequestState >= 8 then return end
 
-		self.status_msg:SetString(phases[cloudServerRequestState] or "")
-	end
-end)
+-- 		self.status_msg:SetString(phases[cloudServerRequestState] or "")
+-- 	end
+-- end)
 
 env.AddClassPostConstruct("widgets/itemselector", function(self)
 	self.banner:SetTexture("images/blr_tradescreen.xml", "banner0_small.tex")
@@ -2539,7 +2531,7 @@ local OldSetPrefabName = EntityScript.SetPrefabName
 function EntityScript:SetPrefabName(name, ...)
 	OldSetPrefabName(self,name, ...)
 	if not self.entity:HasTag("player") then return end
-	self.name=t.SpeechHashTbl.NAMES.Rus2Eng[self.name] or self.name
+	self.name=t.SpeechHashTbl.NAMES.Be2Eng[self.name] or self.name
 end
 
 --Новая версія функціі, выдающей качество предмета
@@ -2594,10 +2586,10 @@ function EntityScript:GetDisplayName(act, ...) --Подмена функціі, 
 		if STRINGS.NAMES[self.prefab:upper()] then
 			--Пытаемся перевесті імя на русскій, еслі это кукла, а не ігрок
 			if not(self.userid and (type(self.userid)=="string") and #self.userid>0)
-				and name==t.SpeechHashTbl.NAMES.Rus2Eng[STRINGS.NAMES[self.prefab:upper()] ] then
+				and name==t.SpeechHashTbl.NAMES.Be2Eng[STRINGS.NAMES[self.prefab:upper()] ] then
 				name=STRINGS.NAMES[t.SpeechHashTbl.NAMES.Eng2Key[name] ]
 				act=act and act.action.id or "DEFAULT"
-				name=(t.RussianNames[name] and (t.RussianNames[name][act] or t.RussianNames[name]["DEFAULTACTION"] or t.RussianNames[name]["DEFAULT"])) or rebuildname(name,act,self.prefab) or name
+				name=(t.BelarusianNames[name] and (t.BelarusianNames[name][act] or t.BelarusianNames[name]["DEFAULTACTION"] or t.BelarusianNames[name]["DEFAULT"])) or rebuildname(name,act,self.prefab) or name
 			end
 		end
 		return name
@@ -2644,7 +2636,7 @@ function EntityScript:GetDisplayName(act, ...) --Подмена функціі, 
 
 		if stage_data.inspect_str and stage_data.inspect_str then
 			local seed_name = ""
-			local farm_plant_seed_ru = ""
+			local farm_plant_seed_bel = ""
 			local knowsseed = false
 			local knowsplantname = false
 			local knowsweedname = false
@@ -2688,21 +2680,21 @@ function EntityScript:GetDisplayName(act, ...) --Подмена функціі, 
 
 					if act then --еслі есть действіе
 						-- выбіраем варіант склоненія по действію для імені семені 
-						if t.RussianNames[seed_name] ~= nil and (t.RussianNames[seed_name][act.action and act.action.id] or t.RussianNames[seed_name]["DEFAULTACTION"]) ~= nil then
-							seed_name = t.RussianNames[seed_name][act.action and act.action.id] or t.RussianNames[seed_name]["DEFAULTACTION"]
+						if t.BelarusianNames[seed_name] ~= nil and (t.BelarusianNames[seed_name][act.action and act.action.id] or t.BelarusianNames[seed_name]["DEFAULTACTION"]) ~= nil then
+							seed_name = t.BelarusianNames[seed_name][act.action and act.action.id] or t.BelarusianNames[seed_name]["DEFAULTACTION"]
 							seed_name = firsttolower(seed_name)
 						end
 						-- выбіраем варіант склоненія по действію для farm_plant_seed (слово "посаженные")
-						if t.RussianNames["Посаженные {seed}"] ~= nil and (t.RussianNames["Посаженные {seed}"][act.action and act.action.id] or t.RussianNames["Посаженные {seed}"]["DEFAULTACTION"]) ~= nil  then
-							farm_plant_seed_ru = t.RussianNames["Посаженные {seed}"][act.action and act.action.id] or t.RussianNames["Посаженные {seed}"]["DEFAULTACTION"]
+						if t.BelarusianNames["Пасаджаныя {seed}"] ~= nil and (t.BelarusianNames["Пасаджаныя {seed}"][act.action and act.action.id] or t.BelarusianNames["Пасаджаныя {seed}"]["DEFAULTACTION"]) ~= nil  then
+							farm_plant_seed_bel = t.BelarusianNames["Пасаджаныя {seed}"][act.action and act.action.id] or t.BelarusianNames["Пасаджаныя {seed}"]["DEFAULTACTION"]
 						end					
 					end
-					name = (farm_plant_seed_ru or "Посаженные").." "..seed_name
+					name = (farm_plant_seed_bel or "Посаженные").." "..seed_name
 				end					
 			end
 			-- склоняем префікс прі намоканіі
 			if Prefix and act then
-				Prefix = "влажный" -- сбрасываем префікс і склоняем заново с учетом полученных данных	
+				Prefix = "мокры" -- сбрасываем префікс і склоняем заново с учетом полученных данных	
 				-- ещё растущіе сорнякі і растенія
 				if (self.prefab:utf8sub(1,4) == "weed" and plant_stage ~= "FULL_WEED" and not (player_is_farmplantidentifier or knowsweedname)) or (self.prefab:utf8sub(1,4) == "farm" and plant_stage == "GROWING" and not (player_is_farmplantidentifier or knowsplantname)) then
 					Prefix = FixPrefix(Prefix,act.action and act.action.id or "NOACTION","farm_plant_unknown")
@@ -2718,37 +2710,41 @@ function EntityScript:GetDisplayName(act, ...) --Подмена функціі, 
 			end			
 		end
 	end
-	if name and self.prefab then --Для ДСТ нужно перевесті імя свіна ілі кроліка на русскій
+
+	if name and self.prefab then
 		if self.prefab=="pigman" then
-			name=t.SpeechHashTbl.PIGNAMES.Eng2Rus[name] or name
+			name=t.SpeechHashTbl.PIGNAMES.Eng2Be[name] or name
 		elseif self.prefab=="pigguard" then
-			name=t.SpeechHashTbl.PIGNAMES.Eng2Rus[name] or name
+			name=t.SpeechHashTbl.PIGNAMES.Eng2Be[name] or name
 		elseif self.prefab=="bunnyman" then
-			name=t.SpeechHashTbl.BUNNYMANNAMES.Eng2Rus[name] or name
+			name=t.SpeechHashTbl.BUNNYMANNAMES.Eng2Be[name] or name
 		elseif self.prefab=="quagmire_swampig" then
-			name=t.SpeechHashTbl.SWAMPIGNAMES.Eng2Rus[name] or name
+			name=t.SpeechHashTbl.SWAMPIGNAMES.Eng2Be[name] or name
+		elseif self.prefab=="merm" then -- todo / mb neen merm guard
+			name=t.SpeechHashTbl.MERMNAMES.Eng2Be[name] or name -- 
 		end
 	end
+
 	if act then --Еслі есть действіе
 		act=act.action.id
 
 		if not itisblueprint then
-			if t.RussianNames[name] then
-				name=t.RussianNames[name][act] or t.RussianNames[name]["DEFAULTACTION"] or t.RussianNames[name]["DEFAULT"] or rebuildname(name,act,self.prefab) or "NAME"
+			if t.BelarusianNames[name] then
+				name=t.BelarusianNames[name][act] or t.BelarusianNames[name]["DEFAULTACTION"] or t.BelarusianNames[name]["DEFAULT"] or rebuildname(name,act,self.prefab) or "NAME"
 			else
 				if not isSeed then 
 					name=rebuildname(name,act,self.prefab)
 				end
 			end
-			if (not self.prefab or self.prefab~="pigman" and self.prefab~="pigguard" and self.prefab~="bunnyman" and self.prefab~="quagmire_trader_merm" and self.prefab~="quagmire_trader_merm2"  and self.prefab~="quagmire_swampigelder"  and self.prefab~="quagmire_goatmum" and self.prefab~="quagmire_goatkid" and self.prefab~="quagmire_swampig")
+			if (not self.prefab or self.prefab~="pigman" and self.prefab~="pigguard" and self.prefab~="bunnyman" and self.prefab~="merm" and self.prefab~="quagmire_trader_merm" and self.prefab~="quagmire_trader_merm2"  and self.prefab~="quagmire_swampigelder"  and self.prefab~="quagmire_goatmum" and self.prefab~="quagmire_goatkid" and self.prefab~="quagmire_swampig")
 			 and not t.ShouldBeCapped[self.prefab] and name and type(name)=="string" and #name>0 then
 				--меняем первый сімвол названія предмета в ніжній регістр
 				name=firsttolower(name)
 			end
-		else name="чертёж предмета \""..name.."\"" end
+		else name="рысунак прадмета \""..name.."\"" end
 
 	else	--Еслі нет действія
-			if itisblueprint then name="Чертёж предмета \""..name.."\"" end
+			if itisblueprint then name="Рысунак прадмета \""..name.."\"" end
 		if not t.ShouldBeCapped[self.prefab] and (self:GetAdjective() or Prefix) then
 			name=firsttolower(name)
 		end
@@ -2759,13 +2755,13 @@ function EntityScript:GetDisplayName(act, ...) --Подмена функціі, 
 
 	if act and name then
 		if act=="SLEEPIN" or act=="JUMPIN" then		
-			name=Prefix and "во "..name or "в "..name
+			name=Prefix and "ва "..name or "у "..name
 		end 
 		if act=="OPEN_CRAFTING" and self.prefab and (self.prefab == "madscience_lab" or self.prefab == "wintersfeastoven") then		
-			name=Prefix and "во "..name or "в "..name
+			name=Prefix and "ва "..name or "у "..name
 		end
 	end 
-	if act and act=="INTERACT_WITH" and name then name="с "..name end --Чтобы не было фразы "Поговоріть с" с надетой шляпой садовніка 
+	if act and act=="INTERACT_WITH" and name then name="з "..name end --Чтобы не было фразы "Поговоріть с" с надетой шляпой садовніка 
 	return name
 end
 
@@ -2779,8 +2775,8 @@ AddClassPostConstruct("components/playercontroller", function(self)
 				local name = STRINGS.NAMES[string.upper(self.placer_recipe.name)]
 				local act = "BUILD"
 				if name then
-					if t.RussianNames[name] then
-						name = t.RussianNames[name][act] or t.RussianNames[name]["DEFAULTACTION"] or t.RussianNames[name]["DEFAULT"] or rebuildname(name,act) or STRINGS.UI.HUD.HERE
+					if t.BelarusianNames[name] then
+						name = t.BelarusianNames[name][act] or t.BelarusianNames[name]["DEFAULTACTION"] or t.BelarusianNames[name]["DEFAULT"] or rebuildname(name,act) or STRINGS.UI.HUD.HERE
 					else
 						name = rebuildname(name,act) or STRINGS.UI.HUD.HERE
 					end

@@ -28,14 +28,10 @@ mods.BielarusizatarDST = {
 	UpdateLogFileName = "updatelog.txt",
 	MainPOfilename = "DST.po",
 	ModsPOfilename = "MODS.po",
-	TranslationTypes = {Full = "1", FontsOnly = "0"},
-	ModTranslationTypes = {Enabled = "1", Disabled = "0"},
-	CurrentTranslationType = nil,
-	IsModTranslEnabled = nil,
 	SteamID = SteamID,
 	SteamURL = "http://steamcommunity.com/sharedfiles/filedetails/?id="..SteamID,
 	DiscordURL = "",
-	SelectedLanguage = "by",
+	SelectedLanguage = "be",
 
 	--Скланенне
 	AdjectiveCaseTags = {

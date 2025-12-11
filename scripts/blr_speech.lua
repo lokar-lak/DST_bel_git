@@ -33,32 +33,32 @@ local function ExtractMeta(str, key)
 			end
 		end
 	end)
-	for act, rus in pairs(actions) do
-		if not t.RussianNames[res] then
-			t.RussianNames[res] = {}
-			t.RussianNames[res]["DEFAULT"] = res --TODO: Это лишнее, нужно удалить
-			t.RussianNames[res].path = key --добавляем путь
+	for act, bel in pairs(actions) do
+		if not t.BelarusianNames[res] then
+			t.BelarusianNames[res] = {}
+			t.BelarusianNames[res]["DEFAULT"] = res --TODO: Это лишнее, нужно удалить
+			t.BelarusianNames[res].path = key --добавляем путь
 			if act~="DEFAULTACTION" then
-				t.RussianNames[res]["DEFAULTACTION"] = rebuildname(res, "DEFAULTACTION")
+				t.BelarusianNames[res]["DEFAULTACTION"] = rebuildname(res, "DEFAULTACTION")
 			end
 			if act~="WALKTO" then
-				t.RussianNames[res]["WALKTO"] = rebuildname(res, "WALKTO")
+				t.BelarusianNames[res]["WALKTO"] = rebuildname(res, "WALKTO")
 			end
 		end
-		t.RussianNames[res][act] = rus
+		t.BelarusianNames[res][act] = bel
 	end
 	return res
 end
 
 --Строит хеш-таблицу по имени персонажа. Английские реплики персонажа должны быть в STRINGS.CHARACTERS
---russource - таблица, в которой находятся все русские реплики персонажа в виде ["ключ из STRINGS"]="русский перевод"
+--belsource - таблица, в которой находятся все русские реплики персонажа в виде ["ключ из STRINGS"]="русский перевод"
 --Если она не указана, то используется стандартная таблица, в которую загружаются реплики из PO файлов LanguageTranslator.languages[t.SelectedLanguage]
-local function BuildCharacterHash(charname, russource)
-	local source=russource or t.PO
-	local function CreateRussianHashTable(hashtbl,tbl,str)
+local function BuildCharacterHash(charname, belsource)
+	local source=belsource or t.PO
+	local function CreateBELHashTable(hashtbl,tbl,str)
 		for i,v in pairs(tbl) do
 			if type(v)=="table" then
-				CreateRussianHashTable(hashtbl,tbl[i],str.."."..i)
+				CreateBELHashTable(hashtbl,tbl[i],str.."."..i)
 			else
 				local val=source[str.."."..i] or v
 				--составляем спец-список всех сообщений, в которых есть отсылки на вставляемое имя (или на что-то другое)
@@ -91,7 +91,7 @@ local function BuildCharacterHash(charname, russource)
 	if charname == "MAXWELL" then charname = "WAXWELL" end
 	if charname == "WIGFRID" then charname = "WATHGRITHR" end
 	t.SpeechHashTbl[charname] = {}
-	CreateRussianHashTable(t.SpeechHashTbl[charname],STRINGS.CHARACTERS[charname],"STRINGS.CHARACTERS."..charname)
+	CreateBELHashTable(t.SpeechHashTbl[charname],STRINGS.CHARACTERS[charname],"STRINGS.CHARACTERS."..charname)
 end
 t.BuildCharacterHash = BuildCharacterHash
 
@@ -102,24 +102,24 @@ end
 
 --Генерируем хеш-таблицы для названий предметов в обе стороны
 --А так же извлекаем мета-данные о поле предмета, его особых формах и необходимости писать с большой буквы
-t.SpeechHashTbl.NAMES = {Eng2Key = {}, Rus2Eng = {}}
+t.SpeechHashTbl.NAMES = {Eng2Key = {}, Be2Eng = {}}
 for key, val in pairs(STRINGS.NAMES) do
 	local fullkey = "STRINGS.NAMES."..key
 	if t.PO[fullkey] then
 		t.PO[fullkey] = ExtractMeta(t.PO[fullkey], key)
 	end
 	t.SpeechHashTbl.NAMES.Eng2Key[val] = key
-	t.SpeechHashTbl.NAMES.Rus2Eng[t.PO[fullkey] or val] = val
+	t.SpeechHashTbl.NAMES.Be2Eng[t.PO[fullkey] or val] = val
 end
 
-t.SpeechHashTbl.SANDBOXMENU = {Eng2Key = {}, Rus2Eng = {}}
+t.SpeechHashTbl.SANDBOXMENU = {Eng2Key = {}, Be2Eng = {}}
 for key, val in pairs(STRINGS.UI.SANDBOXMENU) do
 	local fullkey = "STRINGS.UI.SANDBOXMENU."..key
 	if t.PO[fullkey] then
 		t.PO[fullkey] = ExtractMeta(t.PO[fullkey], key)
 	end
 	t.SpeechHashTbl.SANDBOXMENU.Eng2Key[val] = key
-	t.SpeechHashTbl.SANDBOXMENU.Rus2Eng[t.PO[fullkey] or val] = val
+	t.SpeechHashTbl.SANDBOXMENU.Be2Eng[t.PO[fullkey] or val] = val
 end
 
 --Извлекаем мета-данные из названий скинов
@@ -131,28 +131,34 @@ for key, val in pairs(STRINGS.SKIN_NAMES) do
 end
 
 --хеш-таблицы эпитафий
-t.SpeechHashTbl.EPITAPHS={Eng2Rus={}}
+t.SpeechHashTbl.EPITAPHS={Eng2Be={}}
 for i,v in pairs(STRINGS.EPITAPHS) do
-	t.SpeechHashTbl.EPITAPHS.Eng2Rus[v]=t.PO["STRINGS.EPITAPHS."..i] or v
+	t.SpeechHashTbl.EPITAPHS.Eng2Be[v]=t.PO["STRINGS.EPITAPHS."..i] or v
 	t.PO["STRINGS.EPITAPHS."..i]=nil
 end
 
 --Генерируем хеш-таблицы для имён свиней и кроликов
-t.SpeechHashTbl.PIGNAMES={Eng2Rus={}}
+t.SpeechHashTbl.PIGNAMES={Eng2Be={}}
 for i,v in pairs(STRINGS.PIGNAMES) do
-	t.SpeechHashTbl.PIGNAMES.Eng2Rus[v]=t.PO["STRINGS.PIGNAMES."..i] or v
+	t.SpeechHashTbl.PIGNAMES.Eng2Be[v]=t.PO["STRINGS.PIGNAMES."..i] or v
 	t.PO["STRINGS.PIGNAMES."..i]=nil
 end
-t.SpeechHashTbl.BUNNYMANNAMES={Eng2Rus={}}
+t.SpeechHashTbl.BUNNYMANNAMES={Eng2Be={}}
 for i,v in pairs(STRINGS.BUNNYMANNAMES) do
-	t.SpeechHashTbl.BUNNYMANNAMES.Eng2Rus[v]=t.PO["STRINGS.BUNNYMANNAMES."..i] or v
+	t.SpeechHashTbl.BUNNYMANNAMES.Eng2Be[v]=t.PO["STRINGS.BUNNYMANNAMES."..i] or v
 	t.PO["STRINGS.BUNNYMANNAMES."..i]=nil
 end
 
-t.SpeechHashTbl.SWAMPIGNAMES={Eng2Rus={}}
+t.SpeechHashTbl.SWAMPIGNAMES={Eng2Be={}}
 for i,v in pairs(STRINGS.SWAMPIGNAMES) do
-	t.SpeechHashTbl.SWAMPIGNAMES.Eng2Rus[v]=t.PO["STRINGS.SWAMPIGNAMES."..i] or v
+	t.SpeechHashTbl.SWAMPIGNAMES.Eng2Be[v]=t.PO["STRINGS.SWAMPIGNAMES."..i] or v
 	t.PO["STRINGS.SWAMPIGNAMES."..i]=nil
+end
+
+t.SpeechHashTbl.MERMNAMES={Eng2Be={}}
+for i,v in pairs(STRINGS.MERMNAMES) do
+	t.SpeechHashTbl.MERMNAMES.Eng2Be[v]=t.PO["STRINGS.MERMNAMES."..i] or v
+	t.PO["STRINGS.MERMNAMES."..i]=nil
 end
 
 
@@ -166,12 +172,12 @@ local function BuildSpeechHash(name,tbl,str)
 			if type(v)=="table" then
 				BuildSpeechHash(name,tbl[i],str.."."..i)
 			else
-				t.SpeechHashTbl[name].Eng2Rus[v] = t.PO[str.."."..i] or v
+				t.SpeechHashTbl[name].Eng2Be[v] = t.PO[str.."."..i] or v
 			end	
 		end
 	else		
 		if t.PO[str] then
-			t.SpeechHashTbl[name].Eng2Rus[tbl] = t.PO[str]
+			t.SpeechHashTbl[name].Eng2Be[tbl] = t.PO[str]
 		end
 	end
 end
@@ -184,12 +190,12 @@ for i,v in pairs(STRINGS) do
 	end
 end
 
-t.SpeechHashTbl.MONKEY_QUEEN={Eng2Rus={}}
+t.SpeechHashTbl.MONKEY_QUEEN={Eng2Be={}}
 for _,v in pairs(MONKEY_QUEEN_KEYS) do
 	BuildSpeechHash("MONKEY_QUEEN",STRINGS[v], "STRINGS."..v)
 end
 
-t.SpeechHashTbl.MERM_KING={Eng2Rus={}}
+t.SpeechHashTbl.MERM_KING={Eng2Be={}}
 for _,v in pairs(MERM_KING_KEYS) do
 	BuildSpeechHash("MERM_KING",STRINGS[v], "STRINGS."..v)
 end
@@ -197,62 +203,62 @@ end
 
 --Подгружаем в "хэш" фразы Мамси
 if TheNet:GetServerGameMode() == "quagmire" then
-    t.SpeechHashTbl.GOATMUM_CRAVING_HINTS={Eng2Rus={}}
+    t.SpeechHashTbl.GOATMUM_CRAVING_HINTS={Eng2Be={}}
     for i,v in pairs(STRINGS.GOATMUM_CRAVING_HINTS) do
-        t.SpeechHashTbl.GOATMUM_CRAVING_HINTS.Eng2Rus[v]=t.PO["STRINGS.GOATMUM_CRAVING_HINTS."..i] or v
+        t.SpeechHashTbl.GOATMUM_CRAVING_HINTS.Eng2Be[v]=t.PO["STRINGS.GOATMUM_CRAVING_HINTS."..i] or v
         t.PO["STRINGS.GOATMUM_CRAVING_HINTS."..i]=nil
     end
     for i,v in pairs(STRINGS.GOATMUM_CRAVING_MATCH) do
         if string.find(t.PO["STRINGS.GOATMUM_CRAVING_MATCH."..i],'%%s') then 
-            t.SpeechHashTbl.GOATMUM_CRAVING_HINTS.Eng2Rus[v]=t.PO["STRINGS.GOATMUM_CRAVING_MATCH."..i] or v
+            t.SpeechHashTbl.GOATMUM_CRAVING_HINTS.Eng2Be[v]=t.PO["STRINGS.GOATMUM_CRAVING_MATCH."..i] or v
             t.PO["STRINGS.GOATMUM_CRAVING_MATCH."..i]=nil
         end
     end
     for i,v in pairs(STRINGS.GOATMUM_CRAVING_MISMATCH) do
         if string.find(t.PO["STRINGS.GOATMUM_CRAVING_MISMATCH."..i],'%%s') then 
-            t.SpeechHashTbl.GOATMUM_CRAVING_HINTS.Eng2Rus[v]=t.PO["STRINGS.GOATMUM_CRAVING_MISMATCH."..i] or v
+            t.SpeechHashTbl.GOATMUM_CRAVING_HINTS.Eng2Be[v]=t.PO["STRINGS.GOATMUM_CRAVING_MISMATCH."..i] or v
             t.PO["STRINGS.GOATMUM_CRAVING_MISMATCH."..i]=nil
         end
     end
 
-    t.SpeechHashTbl.GOATMUM_CRAVING_HINTS_PART2={Eng2Rus={}}
+    t.SpeechHashTbl.GOATMUM_CRAVING_HINTS_PART2={Eng2Be={}}
     for i,v in pairs(STRINGS.GOATMUM_CRAVING_HINTS_PART2) do
-        t.SpeechHashTbl.GOATMUM_CRAVING_HINTS_PART2.Eng2Rus[v]=t.PO["STRINGS.GOATMUM_CRAVING_HINTS_PART2."..i] or v
+        t.SpeechHashTbl.GOATMUM_CRAVING_HINTS_PART2.Eng2Be[v]=t.PO["STRINGS.GOATMUM_CRAVING_HINTS_PART2."..i] or v
         t.PO["STRINGS.GOATMUM_CRAVING_HINTS_PART2."..i]=nil
     end
     for i,v in pairs(STRINGS.GOATMUM_CRAVING_HINTS_PART2_IMPATIENT) do
-        t.SpeechHashTbl.GOATMUM_CRAVING_HINTS_PART2.Eng2Rus[v]=t.PO["STRINGS.GOATMUM_CRAVING_HINTS_PART2_IMPATIENT."..i] or v
+        t.SpeechHashTbl.GOATMUM_CRAVING_HINTS_PART2.Eng2Be[v]=t.PO["STRINGS.GOATMUM_CRAVING_HINTS_PART2_IMPATIENT."..i] or v
         t.PO["STRINGS.GOATMUM_CRAVING_HINTS_PART2_IMPATIENT."..i]=nil
     end
 
-    t.SpeechHashTbl.GOATMUM_CRAVING_MAP={Eng2Rus={}}
+    t.SpeechHashTbl.GOATMUM_CRAVING_MAP={Eng2Be={}}
     for i,v in pairs(STRINGS.GOATMUM_CRAVING_MAP) do
-        t.SpeechHashTbl.GOATMUM_CRAVING_MAP.Eng2Rus[v]=t.PO["STRINGS.GOATMUM_CRAVING_MAP."..i] or v
+        t.SpeechHashTbl.GOATMUM_CRAVING_MAP.Eng2Be[v]=t.PO["STRINGS.GOATMUM_CRAVING_MAP."..i] or v
         t.PO["STRINGS.GOATMUM_CRAVING_MAP."..i]=nil
     end
 
-    t.SpeechHashTbl.GOATMUM_WELCOME_INTRO={Eng2Rus={}}
+    t.SpeechHashTbl.GOATMUM_WELCOME_INTRO={Eng2Be={}}
     for i,v in pairs(STRINGS.GOATMUM_WELCOME_INTRO) do
-        t.SpeechHashTbl.GOATMUM_WELCOME_INTRO.Eng2Rus[v]=t.PO["STRINGS.GOATMUM_WELCOME_INTRO."..i] or v
+        t.SpeechHashTbl.GOATMUM_WELCOME_INTRO.Eng2Be[v]=t.PO["STRINGS.GOATMUM_WELCOME_INTRO."..i] or v
         t.PO["STRINGS.GOATMUM_WELCOME_INTRO."..i]=nil
     end
     for i,v in pairs(STRINGS.GOATMUM_LOST) do
-        t.SpeechHashTbl.GOATMUM_WELCOME_INTRO.Eng2Rus[v]=t.PO["STRINGS.GOATMUM_LOST."..i] or v
+        t.SpeechHashTbl.GOATMUM_WELCOME_INTRO.Eng2Be[v]=t.PO["STRINGS.GOATMUM_LOST."..i] or v
         t.PO["STRINGS.GOATMUM_LOST."..i]=nil
     end
     for i,v in pairs(STRINGS.GOATMUM_VICTORY) do
-        t.SpeechHashTbl.GOATMUM_WELCOME_INTRO.Eng2Rus[v]=t.PO["STRINGS.GOATMUM_VICTORY."..i] or v
+        t.SpeechHashTbl.GOATMUM_WELCOME_INTRO.Eng2Be[v]=t.PO["STRINGS.GOATMUM_VICTORY."..i] or v
         t.PO["STRINGS.GOATMUM_VICTORY."..i]=nil
     end
     for i,v in pairs(STRINGS.GOATMUM_CRAVING_MATCH) do
         if t.PO["STRINGS.GOATMUM_CRAVING_MATCH."..i] then 
-            t.SpeechHashTbl.GOATMUM_WELCOME_INTRO.Eng2Rus[v]=t.PO["STRINGS.GOATMUM_CRAVING_MATCH."..i] or v
+            t.SpeechHashTbl.GOATMUM_WELCOME_INTRO.Eng2Be[v]=t.PO["STRINGS.GOATMUM_CRAVING_MATCH."..i] or v
             t.PO["STRINGS.GOATMUM_CRAVING_MATCH."..i]=nil
         end
     end
     for i,v in pairs(STRINGS.GOATMUM_CRAVING_MISMATCH) do
         if t.PO["STRINGS.GOATMUM_CRAVING_MISMATCH."..i] then 
-            t.SpeechHashTbl.GOATMUM_WELCOME_INTRO.Eng2Rus[v]=t.PO["STRINGS.GOATMUM_CRAVING_MISMATCH."..i] or v
+            t.SpeechHashTbl.GOATMUM_WELCOME_INTRO.Eng2Be[v]=t.PO["STRINGS.GOATMUM_CRAVING_MISMATCH."..i] or v
             t.PO["STRINGS.GOATMUM_CRAVING_MISMATCH."..i]=nil
         end
     end
