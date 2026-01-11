@@ -407,8 +407,6 @@ local function rebuildname(str1, action, objectname)
 			elseif action and objectname and (objectname=="pigman" or objectname=="pigguard" or objectname=="merm" or objectname=="bunnyman" or objectname:find("critter")~=nil or t.NamesGender["he2"][objectname]) then
 				if SubSize(str, size -2)=="лец" then
 					str=SubSize(str, 1,size -2).."ьца"
-				elseif SubSize(str, size -2)=="ны" then
-					str=SubSize(str, 1,size -1).."ага"
 				elseif SubSize(str, size -1)=="ец" then
 					str=SubSize(str, 1,size -2).."ца"
 				elseif SubSize(str, size )=="а" then
@@ -417,12 +415,17 @@ local function rebuildname(str1, action, objectname)
 					str=SubSize(str, 1,size -1).."ю"
 				elseif SubSize(str, size )=="ь" then
 					str=SubSize(str, 1,size -1).."я"
+				elseif SubSize(str, size )=="ы" and not wasnoun then
+					str=repsubstr(str,size ,"ага")
 				elseif SubSize(str, size -1)=="ій" then
 					str=repsubstr(str,size -1,"ія")
+					wasnoun=true
 				elseif SubSize(str, size -1)=="ый" then
 					str=repsubstr(str,size -1,"ыя")
+					wasnoun=true
 				elseif sogl[SubSize(str, size )] then
 					str=str.."а"
+					wasnoun=true
 				end
 			elseif action and not(objectname and objectname=="sketch") then --агледзіць (Кага? Што?) Вінавальны
 				if SubSize(str, size -2)=="цыя" then
@@ -444,7 +447,7 @@ local function rebuildname(str1, action, objectname)
 				elseif SubSize(str, size )=="а"  and not wasnoun and not neuter then
 					str=repsubstr(str,size ,"у")
 					wasnoun=true
-				elseif SubSize(str, size )=="я"  and not wasnoun then
+				elseif SubSize(str, size )=="я"  and not wasnoun and not t.NamesGender["it"][objectname] then
 					str=repsubstr(str,size ,"ю")
 					wasnoun=true
 				elseif sogl[SubSize(str, size )] and not wasnoun then
