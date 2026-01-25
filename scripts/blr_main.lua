@@ -2213,59 +2213,53 @@ local function serversettingstabpost(self)
 end
 AddClassPostConstruct("widgets/serversettingstab", serversettingstabpost)
 
--- Не показываем настройкі языка. Ультрамегахак
 do
-	-- local optionsscreen = require("screens/redux/optionsscreen")
-	-- local __ctor = optionsscreen._ctor
-	-- optionsscreen._ctor = function(self, prev_screen, ...) print("_ctor") return __ctor(self, nil, ...) end
-	
-
 	-- ісправленія інтерфейса
 	local TEMPLATES = require "widgets/redux/templates"
 	local oldLabelSpinner = TEMPLATES.LabelSpinner	
 	function TEMPLATES.LabelSpinner(labeltext, spinnerdata, width_label, width_spinner, height, spacing, font, font_size, horiz_offset, ...)
 		local ActiveScreen = "none"
 		if TheFrontEnd:GetActiveScreen() and TheFrontEnd:GetActiveScreen().name then ActiveScreen = TheFrontEnd:GetActiveScreen().name end
-		if ActiveScreen == "MultiplayerMainScreen" then
-			local width_label = width_label and width_label+14 or 220
-			local font_size = font_size or 22
-			local horiz_offset = horiz_offset and horiz_offset+10 or 0
-			local width_spinner = width_spinner and width_spinner-10 or 150
+		-- if ActiveScreen == "MultiplayerMainScreen" then
+		local width_label = width_label and width_label+14 or 220
+		local font_size = font_size or 22
+		local horiz_offset = horiz_offset and horiz_offset+10 or 0
+		local width_spinner = width_spinner and width_spinner-10 or 150
 
-			return oldLabelSpinner(labeltext, spinnerdata, width_label, width_spinner, height, spacing, font, font_size, horiz_offset, ...)
-		else
-			return oldLabelSpinner(labeltext, spinnerdata, width_label, width_spinner, height, spacing, font, font_size, horiz_offset, ...)
-		end
+		-- 	return oldLabelSpinner(labeltext, spinnerdata, width_label, width_spinner, height, spacing, font, font_size, horiz_offset, ...)
+		-- else
+		return oldLabelSpinner(labeltext, spinnerdata, width_label, width_spinner, height, spacing, font, font_size, horiz_offset, ...)
+		-- end
 	end
 
 	local oldLabelNumericSpinner = TEMPLATES.LabelNumericSpinner	
 	function TEMPLATES.LabelNumericSpinner(labeltext, min, max, width_label, width_spinner, height, spacing, font, font_size, horiz_offset, ...)
 		local ActiveScreen = "none"
 		if TheFrontEnd:GetActiveScreen() and TheFrontEnd:GetActiveScreen().name then ActiveScreen = TheFrontEnd:GetActiveScreen().name end
-		if ActiveScreen == "MultiplayerMainScreen" then
-			local width_label = width_label+14 or 220
-			local font_size = font_size or 22
-			local horiz_offset = horiz_offset and horiz_offset+10 or 0
-			local width_spinner = width_spinner and width_spinner-10 or 150
+		-- if ActiveScreen == "MultiplayerMainScreen" then
+		local width_label = width_label+14 or 220
+		local font_size = font_size or 22
+		local horiz_offset = horiz_offset and horiz_offset+10 or 0
+		local width_spinner = width_spinner and width_spinner-10 or 150
 
-			return oldLabelNumericSpinner(labeltext, min, max, width_label, width_spinner, height, spacing, font, font_size, horiz_offset, ...)
-		else
-			return oldLabelNumericSpinner(labeltext, min, max, width_label, width_spinner, height, spacing, font, font_size, horiz_offset, ...)
-		end
+		-- 	return oldLabelNumericSpinner(labeltext, min, max, width_label, width_spinner, height, spacing, font, font_size, horiz_offset, ...)
+		-- else
+		return oldLabelNumericSpinner(labeltext, min, max, width_label, width_spinner, height, spacing, font, font_size, horiz_offset, ...)
+		-- end
 	end
 
 	local oldOptionsLabelCheckbox = TEMPLATES.OptionsLabelCheckbox	
 	function TEMPLATES.OptionsLabelCheckbox(onclick, labeltext, checked, width_label, width_button, height, checkbox_size, spacing, font, font_size, horiz_offset, ...)
 		local ActiveScreen = "none"
 		if TheFrontEnd:GetActiveScreen() and TheFrontEnd:GetActiveScreen().name then ActiveScreen = TheFrontEnd:GetActiveScreen().name end
-		if ActiveScreen == "MultiplayerMainScreen" then
-			local font_size = font_size or 22
-			local horiz_offset = horiz_offset and horiz_offset+10 or 0
+		-- if ActiveScreen == "MultiplayerMainScreen" then
+		local font_size = font_size or 22
+		local horiz_offset = horiz_offset and horiz_offset+10 or 0
 
-			return oldOptionsLabelCheckbox(onclick, labeltext, checked, width_label, width_button, height, checkbox_size, spacing, font, font_size, horiz_offset, ...)
-		else
-			return oldOptionsLabelCheckbox(onclick, labeltext, checked, width_label, width_button, height, checkbox_size, spacing, font, font_size, horiz_offset, ...)
-		end
+		-- 	return oldOptionsLabelCheckbox(onclick, labeltext, checked, width_label, width_button, height, checkbox_size, spacing, font, font_size, horiz_offset, ...)
+		-- else
+		return oldOptionsLabelCheckbox(onclick, labeltext, checked, width_label, width_button, height, checkbox_size, spacing, font, font_size, horiz_offset, ...)
+		-- end
 	end
 
 
