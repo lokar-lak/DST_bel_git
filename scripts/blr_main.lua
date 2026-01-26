@@ -19,6 +19,8 @@ local DEBUG_ENABLED = false
 Sim.ShouldWarnModsLoaded = function() return false end
 
 modimport("scripts/blr_fonts.lua")
+modimport("scripts/blr_fix.lua")
+
 
 AddClassPostConstruct("widgets/redux/loadingwidget", function(self)
     if self and self.loading_tip_text then -- если советы не отключены
@@ -57,7 +59,7 @@ local function runTranslatingEngine()
             end
 
             local translated = t.TranslateToBelarusian(message, Ents[guid]) or message
-            return OldNetworking_Talk(guid, translated, ...)
+			return OldNetworking_Talk(guid, translated, ...)
         end
     end
 
@@ -137,16 +139,22 @@ end
 
 -- Запускаем адразу пасля загрузкі PO-файла
 
-
--- TODO: Сделать внешній скріпт для этого
-for k, v in pairs(t.PO) do
-	if v == "<пуста>" or v:find("*PLACEHOLDER") then
-		t.PO[k] = nil
-	end
+local function GetDayForm(dayCount, forms)
+    -- Define the default day forms if not provided
+    forms = forms or {"дзень", "дні", "дзён"}
+    -- Determine the grammatical case for the word "день" based on the day count
+    local formIndex
+    if dayCount % 10 == 1 and dayCount % 100 ~= 11 then
+        formIndex = 1 -- singular
+    elseif dayCount % 10 >= 2 and dayCount % 10 <= 4 and (dayCount % 100 < 10 or dayCount % 100 >= 20) then
+        formIndex = 2 -- genitive
+    else
+        formIndex = 3 -- plural
+    end
+    return forms[formIndex]
 end
-print("PO файл загружаны!")
 
---Возвращает корректную форму слова день (ілі другого, переданного вторым параметром)
+--Define the default day forms if not provided
 local function StringTime(n,s)
 	local pl_type=n%10==1 and n%100~=11 and 1 or(n%10>=2 and n%10<=4
 			and(n%100<10 or n%100>=20)and 2 or 3)
@@ -252,7 +260,7 @@ local function rebuildname(str1, action, objectname)
 					str=SubSize(str, 1,size -2).."ку"
 					wasnoun=true
 				elseif SubSize(str, size -1)=="ня" and t.NamesGender["it"][objectname] then
-					tr=SubSize(str, 1,size -2).."няці"
+					str=SubSize(str, 1,size -2).."няці"
 				elseif SubSize(str, size -1)=="ій" then
 					str=repsubstr(str,size -1,"ія")
 				elseif SubSize(str, size -1)=="ок" then
@@ -404,13 +412,15 @@ local function rebuildname(str1, action, objectname)
 				end
 			--ізучіть (Кого? Что?) Вінітельный
 			--пріменітельно к імені свіньі ілі кроліка
-			elseif action and objectname and (objectname=="pigman" or objectname=="pigguard" or objectname=="merm" or objectname=="bunnyman" or objectname:find("critter")~=nil or t.NamesGender["he2"][objectname]) then
+			elseif action and objectname and (objectname=="pigman" or objectname=="pigguard" or objectname=="merm" or objectname=="bunnyman" or objectname=="mermguard_lunar" or objectname=="mermguard" or objectname=="merm_lunar" or objectname=="sharkboi" or objectname:find("critter")~=nil or t.NamesGender["he2"][objectname]) then
 				if SubSize(str, size -2)=="лец" then
 					str=SubSize(str, 1,size -2).."ьца"
 				elseif SubSize(str, size -1)=="ец" then
 					str=SubSize(str, 1,size -2).."ца"
 				elseif SubSize(str, size )=="а" then
 					str=repsubstr(str,size ,"у")
+				elseif SubSize(str, size -1)=="ня" and t.NamesGender["it"][objectname] then
+					wasnoun=true
 				elseif SubSize(str, size )=="я" then
 					str=SubSize(str, 1,size -1).."ю"
 				elseif SubSize(str, size )=="ь" then
@@ -429,7 +439,7 @@ local function rebuildname(str1, action, objectname)
 				end
 			elseif action and not(objectname and objectname=="sketch") then --агледзіць (Кага? Што?) Вінавальны
 				if SubSize(str, size -2)=="цыя" then
-					str=SubSize(str, 1,size -2).."ыю"
+					str=repsubstr(str,size ,"ю")
 				elseif SubSize(str, size -2)=="яса" then
 					wasnoun=true
 				elseif SubSize(str, size -2)=="йка" then
@@ -442,6 +452,9 @@ local function rebuildname(str1, action, objectname)
 					str=repsubstr(str,size -1,"ую")
 				elseif SubSize(str, size -1)=="ыя" then
 					str=repsubstr(str,size -1,"ыя")
+				elseif SubSize(str, size -1)=="кі" and not wasnoun then
+					str=repsubstr(str,size ,"оў")
+					wasnoun=true
 				elseif SubSize(str, size -1)=="яя" then
 					str=repsubstr(str,size -1,"юю")
 				elseif SubSize(str, size )=="а"  and not wasnoun and not neuter then
@@ -878,47 +891,8 @@ function GetSkinUsableOnString(item_type, popup_txt)
 end
 
 require("widgets/eventannouncer")
---Переопределяем глобальную функцію, формірующую анонс-сообщеніе о смерті
---Делаем это тут, потому что она объявлена в классе eventannouncer, і не відна до обращенія к этому классу.
---Тут нам нужно позаботіться об выводе імені убійцы на англійском языке.
--- local _GetNewDeathAnnouncementString = GetNewDeathAnnouncementString
--- function GetNewDeathAnnouncementString(theDead, source, pkname)
--- 	local str = _GetNewDeathAnnouncementString(theDead, source, pkname)
--- 	if TheWorld and not TheWorld.ismastersim then return str end
--- 	if string.find(str,STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1,1,true) then
--- 		--еслі ігрок был убіт
--- 		local capturestring=nil
--- 		if string.find(str,STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_MALE,1,true) then
--- 			capturestring="( "..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1.." )(.*)("..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_MALE..")"
--- 		elseif string.find(str,STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_FEMALE,1,true) then
--- 			capturestring="( "..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1.." )(.*)("..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_FEMALE..")"
--- 		elseif string.find(str,STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_ROBOT,1,true) then
--- 			capturestring="( "..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1.." )(.*)("..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_ROBOT..")"
--- 		elseif string.find(str,STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_DEFAULT,1,true) then
--- 			capturestring="( "..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1.." )(.*)("..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_DEFAULT..")"
--- 		else
--- 			capturestring="( "..STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1.." )(.*)(%.)$"
--- 		end
--- 		if capturestring then -- выяснілось, что кто-то убіт
--- 			local a, killername, b=str:match(capturestring)
--- 			if killername then
--- 				killername=t.SpeechHashTbl.NAMES.Be2Eng[killername] or killername--Переводім на англійскій
--- 				str=str:gsub(capturestring,"%1"..killername.."%3")
--- 			end
--- 		end
--- 	end
--- 	return str
--- end
---Сообщеніе о том, что кто-то был ожівлён. Тут нужно подменіть на англійскій істочнік ожівленія
--- local _GetNewRezAnnouncementString = GetNewRezAnnouncementString
--- function GetNewRezAnnouncementString(theRezzed, source, ...)
--- 	source = source and (t.SpeechHashTbl.NAMES.Be2Eng[source] or source) --Переводім імя на англійскій
--- 	return _GetNewRezAnnouncementString(theRezzed, source, ...)
--- end
 
---Подбірает сообщеніе із хеш-табліц по указанному персонажу і сообщенію на англійском.
---Еслі персонаж не указан, іспользуется уілсон.
---Возвращает переведённое сообщеніе і вторым параметром табліцу всех замен %s, еслі таковые былі.
+
 function t.GetFromSpeechesHash(message, char)
 	local function GetMentioned(message,char)
 		if not (message and t.SpeechHashTbl[char] and t.SpeechHashTbl[char]["mentioned_class"] and type(t.SpeechHashTbl[char]["mentioned_class"])=="table") then return nil end
@@ -2541,8 +2515,16 @@ function EntityScript:GetDisplayName(act, ...) --Подмена функціі, 
             name=t.SpeechHashTbl.BUNNYMANNAMES.Eng2Be[name] or name
         elseif self.prefab=="quagmire_swampig" then
             name=t.SpeechHashTbl.SWAMPIGNAMES.Eng2Be[name] or name
-        elseif self.prefab=="merm" then -- todo / mb neen merm guard
-            name=t.SpeechHashTbl.MERMNAMES.Eng2Be[name] or name --
+        elseif self.prefab=="merm" then
+            name=t.SpeechHashTbl.MERMNAMES.Eng2Be[name] or name
+        elseif self.prefab=="mermguard" then
+            name=t.SpeechHashTbl.MERMNAMES.Eng2Be[name] or name
+        elseif self.prefab=="merm_lunar" then
+            name=t.SpeechHashTbl.MERMNAMES.Eng2Be[name] or name	
+        elseif self.prefab=="mermguard_lunar" then
+            name=t.SpeechHashTbl.MERMNAMES.Eng2Be[name] or name		
+		elseif self.prefab=="sharkboi" then
+            name=t.SpeechHashTbl.SHARKBOINAMES.Eng2Be[name] or name
         end
     end
     if act then --Еслі есть действіе
@@ -2555,7 +2537,7 @@ function EntityScript:GetDisplayName(act, ...) --Подмена функціі, 
                     name=rebuildname(name,act,self.prefab)
                 end
             end
-            if (not self.prefab or self.prefab~="pigman" and self.prefab~="pigguard" and self.prefab~="bunnyman" and self.prefab~="merm" and self.prefab~="quagmire_trader_merm" and self.prefab~="quagmire_trader_merm2" and self.prefab~="quagmire_swampigelder" and self.prefab~="quagmire_goatmum" and self.prefab~="quagmire_goatkid" and self.prefab~="quagmire_swampig")
+            if (not self.prefab or self.prefab~="pigman" and self.prefab~="pigguard" and self.prefab~="bunnyman" and self.prefab~="mermguard" and self.prefab~="merm_lunar" and self.prefab~="mermguard_lunar" and self.prefab~="sharkboi" and self.prefab~="merm" and self.prefab~="quagmire_trader_merm" and self.prefab~="quagmire_trader_merm2" and self.prefab~="quagmire_swampigelder" and self.prefab~="quagmire_goatmum" and self.prefab~="quagmire_goatkid" and self.prefab~="quagmire_swampig")
             and not t.ShouldBeCapped[self.prefab] and name and type(name)=="string" and #name>0 then
                 --меняем первый сімвол названія предмета в ніжній регістр
                 name=firsttolower(name)

@@ -149,6 +149,12 @@ for i,v in pairs(STRINGS.BUNNYMANNAMES) do
 	t.PO["STRINGS.BUNNYMANNAMES."..i]=nil
 end
 
+t.SpeechHashTbl.SHARKBOINAMES={Eng2Be={}}
+for i,v in pairs(STRINGS.SHARKBOINAMES) do
+	t.SpeechHashTbl.SHARKBOINAMES.Eng2Be[v]=t.PO["STRINGS.SHARKBOINAMES."..i] or v
+	t.PO["STRINGS.SHARKBOINAMES."..i]=nil
+end
+
 t.SpeechHashTbl.SWAMPIGNAMES={Eng2Be={}}
 for i,v in pairs(STRINGS.SWAMPIGNAMES) do
 	t.SpeechHashTbl.SWAMPIGNAMES.Eng2Be[v]=t.PO["STRINGS.SWAMPIGNAMES."..i] or v
