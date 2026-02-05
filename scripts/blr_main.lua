@@ -158,7 +158,7 @@ end
 local function StringTime(n,s)
 	local pl_type=n%10==1 and n%100~=11 and 1 or(n%10>=2 and n%10<=4
 			and(n%100<10 or n%100>=20)and 2 or 3)
-	s=s or {"дзень","дні","дзён"}
+	s=s or {"день","дня","днів"}
 	return s[pl_type]
 end
 
@@ -224,8 +224,6 @@ local function rebuildname(str1, action, objectname)
 			if action=="WALKTO" then --падысці да (каго? чаго?) Родны
 				if SubSize(str, size -1)=="ая" then
 					str=repsubstr(str,size -1,"ай")
-				elseif SubSize(str, size -1)=="ая" then
-					str=repsubstr(str,size -1,"ай")
 				elseif SubSize(str, size -2)=="цыя" then
 					str=repsubstr(str,size ,"і")
 				elseif SubSize(str, size -1)=="ыя" then
@@ -246,8 +244,6 @@ local function rebuildname(str1, action, objectname)
 					str=repsubstr(str,size ,"я")
 				elseif SubSize(str, size -1)=="ны" then
 					str=repsubstr(str,size ,"ага")
-				elseif SubSize(str, size -1)=="ае" then
-					str=repsubstr(str,size -1,"ага")
 				elseif SubSize(str, size -1)=="ее" then
 					str=repsubstr(str,size -1,"ему")
 				elseif SubSize(str, size -1)=="ые" then
@@ -656,6 +652,7 @@ do
 	endings["CHARGE_FROM"] = endings["gen"]	
 	endings["OPEN_CRAFTING"] = endings["dat"]
 	endings["TRADE_WITH "]= endings["abl"]
+	endings["HITCHUP"] = endings["gen"]
 
 	-- для рода реліквій, т.к. імеем одно выводімое імя, но разные префабы
 	local relics = {ruins_chair=1, ruins_table=1, ruins_vase=1, ruins_plate=1, ruins_bowl=1, ruins_chipbowl=1}
@@ -1159,14 +1156,26 @@ function t.TranslateToBelarusian(message, entity)
 	return message
 end
 
--- --Перевод сообщенія на русскій на стороне кліента
--- local _Networking_Talk = Networking_Talk
--- function Networking_Talk(guid, message, ...)
--- 	local entity = Ents[guid]
--- 	t.print("Networking_Talk", entity, message)
--- 	message = t.TranslateToBelarusian(message, entity) or message --Переводім на русскій
--- 	return _Networking_Talk(guid, message, ...)
--- end
+local _Networking_Talk = Networking_Talk
+function Networking_Talk(guid, message, ...)
+	local entity = Ents[guid]
+	--t.print("Networking_Talk", entity, message)
+	message = t.TranslateToBelarusian(message, entity) or message
+	return _Networking_Talk(guid, message, ...)
+end
+
+local _Talker = NetworkProxy.Talker
+NetworkProxy.Talker = function(self, message, entity, ...)
+	--t.print("entity", entity)
+	local inst = entity and entity:GetGUID() or nil
+	inst = inst and Ents[inst] or nil
+
+	if inst and message then
+		message = t.TranslateToBelarusian(message, inst) or message
+	end
+
+	return _Talker(self, message, entity, ...)
+end
 
 -- ісправленіе умлаутов Вігфрід в чате
 local _Networking_Say = Networking_Say
@@ -1365,7 +1374,7 @@ AddPrefabPostInit("blueprint", function(inst)
 				STRINGS.NAMES[string.upper(data.recipetouse)]=nil
 			else
 				inst.OldOnLoad(inst, data)
-			end
+end
 			reassignfn(inst)
 		end
 	end
@@ -1451,7 +1460,7 @@ do
 									if str then
 										str = str:gsub("(%d+)(.+)", function (days, word)
 											if word~=STRINGS.UI.PLAYERSTATUSSCREEN.AGE_DAY and word~=STRINGS.UI.PLAYERSTATUSSCREEN.AGE_DAYS then return end
-											return days.." "..StringTime(days)
+											return days.." "..GetDayForm(days)
 										end)
 									end
 									local res = OldSetString(self, str, ...)
@@ -1473,7 +1482,7 @@ do
 				if str then
 					str = str:gsub(STRINGS.UI.HUD.CLOCKSURVIVED.."(.+)(%d+)(%s+)(.+)", function (sep1, days, sep2, word)
 						if word~=STRINGS.UI.HUD.CLOCKDAY and word~=STRINGS.UI.HUD.CLOCKDAYS then return end
-						return StringTime(days, {"Пражыты", "Пражыта", "Пражыта"})..sep1..days..sep2..StringTime(days)
+						return "Пражыта"..sep1..days..sep2..StringTime(days)
 					end)
 				end
 				local res = OldSetString(self, str, ...)
@@ -1816,7 +1825,7 @@ TranslateStringTable(STRINGS)
 		if self.countdown_message then self.countdown_message:SetSize(27) end
 		SetHookFunction(self.countdown_message, "SetString", function(self, str)
 			local val=tonumber((str or ""):match(" ([^ ]*)$"))
-			return str..(val and " "..StringTime(val,{"секунду","секунды","секунд"}) or "")
+			return str..(val and " "..GetDayForm(val,{"секунда","секунды","секунд"}) or "")
 		end, false, true, self.countdown_message and self.countdown_message:GetString())
 
 		if self.survived_message then self.survived_message:SetSize(27) end
@@ -1826,7 +1835,7 @@ TranslateStringTable(STRINGS)
 			if self.survived_message then
 				local age = self.owner.Network:GetPlayerAge()
 				local newmsg=self.survived_message:GetString()
-				self.survived_message:SetString(newmsg:gsub("дней",StringTime(age),1))
+				self.survived_message:SetString(newmsg:gsub("дзён",StringTime(age),1))
 			end
 		end
 		-- SetHookFunction(self.survived_message, "SetString", function(self, str)
@@ -2098,7 +2107,7 @@ AddClassPostConstruct("widgets/quagmire_recipepopup", function(self) --Для г
 			self.desc:SetString("")
 			self.desc:SetMultilineTruncatedString(STRINGS.RECIPE_DESC[string.upper(self.recipe.product) or "ERROR!"], 2, 320, nil, true)
 		end
-	end
+    end
 end)
 
 do
@@ -2153,11 +2162,11 @@ AddClassPostConstruct("widgets/truescrolllist", function(self)
 		end]]
 		if data and data.days_survived and widget.DAYS_LIVED then
 			local Text = require "widgets/text"
-			widget.DAYS_LIVED:SetTruncatedString((data.days_survived or STRINGS.UI.MORGUESCREEN.UNKNOWN_DAYS).." "..StringTime(data.days_survived), widget.DAYS_LIVED._align.maxwidth, widget.DAYS_LIVED._align.maxchars, true)
+			widget.DAYS_LIVED:SetTruncatedString((data.days_survived or STRINGS.UI.MORGUESCREEN.UNKNOWN_DAYS).." "..GetDayForm(data.days_survived), widget.DAYS_LIVED._align.maxwidth, widget.DAYS_LIVED._align.maxchars, true)
 		end
 		if data and data.playerage and widget.PLAYER_AGE then
 			local Text = require "widgets/text"
-			local age_str = (data.playerage or STRINGS.UI.MORGUESCREEN.UNKNOWN_DAYS).." "..StringTime(tonumber(data.playerage))
+			local age_str = (data.playerage or STRINGS.UI.MORGUESCREEN.UNKNOWN_DAYS).." "..GetDayForm(tonumber(data.playerage))
 			widget.PLAYER_AGE:SetTruncatedString(age_str, widget.PLAYER_AGE._align.maxwidth, widget.PLAYER_AGE._align.maxchars, true)
 			if widget.SEEN_DATE and not widget.SEEN_DATE.BLRFixed then
 				local OldSetString = widget.SEEN_DATE.SetString
@@ -2183,8 +2192,8 @@ end)
 local function serversettingstabpost(self)
 	for i,wgt in ipairs(self.privacy_type.buttons.buttonwidgets) do
 		wgt.button:SetFont(NEWFONT)
-	end
-end
+			end
+		end
 AddClassPostConstruct("widgets/serversettingstab", serversettingstabpost)
 
 do
@@ -2309,6 +2318,13 @@ AddClassPostConstruct("screens/redux/scrapbookscreen", function(self)
 			elseif t.PO["STRINGS.SCRAPBOOK.DATA_STACK"] and string.match(str,"^(%d*)%s"..t.PO["STRINGS.SCRAPBOOK.DATA_STACK"].."$") then
 				local splitstr = split(str, " ")
 				str = splitstr[1] .. StringTime(splitstr[1],{" ШТУКА"," ШТУКІ"," ШТУК"}) or str
+			elseif t.PO["STRINGS.SCRAPBOOK.DATA_SECONDS"] and string.match(str,"^(%d*)%s"..t.PO["STRINGS.SCRAPBOOK.DATA_SECONDS"].."$") then
+				local splitstr = split(str, " ")
+				str = splitstr[1] .. StringTime(splitstr[1],{" СЕКУНДА"," СЕКУНДЫ"," СЕКУНД"}) or str
+			elseif t.PO["STRINGS.SCRAPBOOK.DATA_MINUTES"] and string.match(str,"^(%d*)%s"..t.PO["STRINGS.SCRAPBOOK.DATA_MINUTES"].."$") then
+				local splitstr = split(str, " ")
+				str = splitstr[1] .. StringTime(splitstr[1],{" ХВІЛІНА"," ХВІЛІНЫ"," ХВІЛІН"}) or str
+				--print(StringTime(splitstr[1],{" ХВИЛИНА"," ХВИЛИНИ"," ХВИЛИН"}))
 			end
 
 		    self.string = str
