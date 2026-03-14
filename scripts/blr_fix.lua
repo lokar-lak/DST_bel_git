@@ -1,8 +1,9 @@
 local GLOBAL = GLOBAL
 GLOBAL.setfenv(1, GLOBAL)
 
--- Табліца хуткіх замен Stageactor
+-- Табліца хуткіх замен
 local textfix = {
+    -----StageActor
     ["Act 1."] = "1-ы акт.",
     ["There are so many things I've never done,"] = "Так шмат таго, што я ніколі не рабіла.",
     ["so many things I've never seen..."] = "так шмат усяго, чаго ніколечкі не бачыла...",
@@ -592,12 +593,54 @@ local textfix = {
     ["\"MOTIVATIONAL SPEAKING\""] = "«МАТЫВАЦЫЙНАЙ ПРАМОВАЙ»",
     ["TO INSPIRE YOU TO BE MORE USEFUL TO ME"] = "КАБ НАТХНІЦЬ ВАС БЫЦЬ БОЛЬШ КАРЫСНЫМІ",
     ["BUT SINCE YOU HAVE SAD LITTLE MEAT BRAINS"] = "АЛЕ ПАКОЛЬКІ Ў ВАС БЕСКАРЫСНЫЯ МЯСНЫЯ МАЗГІ,",
+
+    --Stageactor princess
+    ["Who's that?"] = "Хто гэта?",
+    ["A queen? More like a spoiled princess!"] = "Каралева? Больш падобна на распешчаную прынцэсу!",
+    ["Relax, princess. They'll be here soon."] = "Расслабся, прынцэса. Яны хутка будуць тут.",
+    ["She looks... equine."] = "Яна падобная... на каня.",
+    ["Yeah, hold your horses!"] = "Так, прытрымайце коней!",
+    ["HA HA HA HA HA!"] = "ХА-ХА-ХА-ХА-ХА!",
+    ["Turn thy thoughts to those in need!"] = "Звярні думкі свае да тых, хто ў гэтым патрэбу мае!",
+    ["Yet I fret not o'er thee, Desdemona,"] = "І ўсё ж я не турбуюся пра цябе, Дэздэмона,",
+    ["for I know thou art ever bound to come."] = "бо ведаю я, што калі-небудзь ты абавязкова прыйдзеш.",
+    ["And upon thy back,"] = "І на тваёй спіне,",
+    ["shall we all return unto our hearth!"] = "вернемся мы ўсе да нашага краю!",
+    ["Thus you see,"] = "Як вы бачыце,",
+    ["much is to be done,"] = "многае яшчэ трэба будзе зрабіць,",
+    ["by my Four Knights and me."] = "мне і чацвёрцы маіх рыцараў.",
+    ["Where, prithee, is my entourage?"] = "Дзе ж, клічу, мая світа?",
+    ["My loyal escorts? My Knights in gilded armor?"] = "Верныя спадарожнікі? Рыцары ў пазалочаных даспехах?",
+    ["Must I venture alone upon these lands"] = "Няўжо я мушу ў адзіночку блукаць па гэтых землях",
+    ["without thy steadfast company?"] = "без вернага таварыства вашага?",
+    ["Come, Pascal!"] = "Хадзем, Паскаль!",
+    ["We have many souls to meet!"] = "Нам трэба сустрэцца з многімі душамі!",
+    ["Haste, Warren!"] = "Спяшайся, Ворэн!",
+    ["The Houses await thy arrival!"] = "Дамы чакаюць твайго прыбыцця!",
+    ["Make swift thy way, Fermin!"] = "Паспяшайся ў дарогу, Фермін!",
+
+    --Stageactor knights
+    ["Tell us a joke!"] = "Раскажы нам жарт!",
+    ["Quit stall-in!"] = "Годзе цягнуць час!",
+    ["What a foal!"] = "Як кабылка!",
+    ["Straight from the horse's mouth!"] = "Як кабыла з возу!",
+    ["Feeling a little horse?"] = "Маеш конскі апетыт да забавы?",
+    ["So much for a mane attraction!"] = "А ці падкаваны ты для галоўнай падзеі?",
+    ["HA HA HA HA HA!"] = "ХА-ХА-ХА-ХА-ХА!",
+    ["..."] = "...",
+
+    ---- Джымба
     ["MULT"] = "МНОЖНІК",
     ["CHIPS"] = "ФІШКІ",
+
+    ----- Пашыраныя налады 
+    ["Wall"] = "Сцяна",
+    ["Half-Wall"] = "Палова сцяны",
+    ["Tile"] = "Плітка",
+    ["Half-Tile"] = "Палова пліткі",
 }
 
 
--- Перахоп SetString (як ва ўкраінцаў)
 local oldSetString = TextWidget.SetString
 function TextWidget:SetString(str, ...)
     if type(str) == "string" then

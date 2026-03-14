@@ -158,7 +158,7 @@ end
 local function StringTime(n,s)
 	local pl_type=n%10==1 and n%100~=11 and 1 or(n%10>=2 and n%10<=4
 			and(n%100<10 or n%100>=20)and 2 or 3)
-	s=s or {"день","дня","днів"}
+	s=s or {"день","дні","днів"}
 	return s[pl_type]
 end
 
