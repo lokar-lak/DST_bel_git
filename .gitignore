@@ -21,3 +21,5 @@ rad.json
 #Test results file
 TestResults.xml
 .DST.po.kate-swp
+.directory
+mod.manifest
