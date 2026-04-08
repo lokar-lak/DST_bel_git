@@ -23,3 +23,5 @@ TestResults.xml
 .DST.po.kate-swp
 .directory
 mod.manifest
+.megaignore
+.directory
