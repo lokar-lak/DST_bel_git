@@ -21,13 +21,31 @@ Correction of `DST.po` in blocks, focusing on spelling, punctuation, grammar, te
   - Grammatical gender fixes: `нудны гародніна`→`нудная гародніна`, `смажаны агародніна`→`смажаная гародніна`, etc.
   - `Хадzem`→`Хадземце`, `цык-цык`→`цік-так`, `усеўся`→`выправіцца`
   - Various other fixes
+- Lines 54001-64000: corrected (132/132)
+  - Fixed corrupted `усе` fragments in context: `усе ўсе` → `ўсё`/`ужо`/`сыдзе`/`уцякайце`/other natural wording
+  - Wanda naturalness fixes: `сучасны пераварот` → `асучасніла`, `Можа, яе трэба нацягнуць?` → `Можа, гэта трэба завесці?`
+  - Wanda gender fixes: `Сумаваў` → `Сумавала`, `быць усе ўсе ўжалены` → natural feminine/impersonal wording
+  - `брыльянт(ы/аў)` → `цацанк(а/і/ак)` for trinkets/knickknacks
+  - Warly fixes: `усе пакідаць` → `сыходзіць`, `мяне ўкусіл` → `мяне ўкусіла`, `тэрміт` → `што б гэта магло быць`
+  - `{name}` kept gender-neutral: `у {name} нарэшце атрымалася іх знайсці`
+  - Various grammar/naturalness fixes: `падаць надзеі` → `мець надзеі`, `свежыя гародніна` → `свежая гародніна`, `не добра` → `нядобра`
+- Lines 64001-74000: corrected
+  - Applied updated terminology: `вадаплаў` kept for `boat`, no replacement with `лодка`
+  - Warly grammar/naturalness fixes: `Свежевыбраная гародніна` → `Свежасабраная гародніна`, `Закукі` → `Закускі`, `Ці асмелься я?` → `Ці асмелюся я?`
+  - Fixed corrupted `усе`: `Яна ўсе ў кавалках` → `Яна ўся ў кавалках`, `Гэта ўсе ў галаве...` → `Гэта ўсё ў галаве...`
+  - Fixed corrupted `морквацук` in carrot contexts: `морквацук такога памеру` → `моркву такога памеру`, `свежы морквацук` → `свежая морква`
+  - `pet` terminology fixes: `пітомец/пітомцы` → `гадаванец/гадаванцы`
+  - Various agreement and mistranslation fixes: `Казінае малочны коктэйль` → `Казіны малочны кактэйль`, `Ходзячая сквародка пад ціскам` → `Хадзячая хуткаварка`, `Merci beacoup для солі` → `Merci beaucoup за соль`
 
 ### Next Steps
-- Proceed to block 54001-64000
+- Proceed to block 74001-84000
 - Or address remaining corrupted escape sequences (lines 321416, 426786)
 
 ## Key Rules
 - `pet` → `гадаванец`
+- `knickknack` → `забаўка`
+- `trinket` → `бірулька`
+- Keep `вадаплаў` for `boat`; do not replace it with `лодка`
 - Comparative degree: `лепш за`, `найлепшы з`
 - Wanda: feminine verbs/adjectives (`сказала`, `асцярожнай`, `пабудавала`)
 - `{name}`: avoid gendered verbs, use impersonal constructions
