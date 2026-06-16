@@ -36,9 +36,16 @@ Correction of `DST.po` in blocks, focusing on spelling, punctuation, grammar, te
   - Fixed corrupted `морквацук` in carrot contexts: `морквацук такога памеру` → `моркву такога памеру`, `свежы морквацук` → `свежая морква`
   - `pet` terminology fixes: `пітомец/пітомцы` → `гадаванец/гадаванцы`
   - Various agreement and mistranslation fixes: `Казінае малочны коктэйль` → `Казіны малочны кактэйль`, `Ходзячая сквародка пад ціскам` → `Хадзячая хуткаварка`, `Merci beacoup для солі` → `Merci beaucoup за соль`
+- Lines 74001-84000: corrected
+  - Warly fixes: `падвэнджанае мякаць` → `падвэнджаная мякаць`, `Прабачлівасць 0/0` → `Прадбачлівасць 0/0`, `мог by` → `мог бы`
+  - Fixed Warly mistranslations/naturalness: `часнок-масла` → `часночнае масла`, `Кулі %s — зброя` → `Кулакі %s — зброя`, `на зямлі` → `чорт вазьмі`
+  - Wathgrithr feminine agreement fixes: `выбраў` → `выбрала`, `бачыў` → `бачыла`, `перамаглі` → `перамагла`, `стаміўся` → `стамілася`, `прыбыў` → `прыбыла`
+  - Fixed corrupted `ўсед/усе` fragments: `ўседаю ў святло` → `ступаю ў святло`, `ўседаеш з бою` → `ўцякаеш з бою`, `УСЕДАЙ` → `УЦЯКАЙ`, `ўседае на зямлі` → `звіваецца на зямлі`
+  - Applied boat terminology: `вадалаз/вадалаў` in vessel contexts → `вадаплаў`
+  - Various grammar and terminology fixes: `металёваму сябару` → `металёваму сябру`, `морквацукі` → `морква` in carrot contexts, `квэст` → `заданне`, `ваярскі строі` → `ваярскі строй`
 
 ### Next Steps
-- Proceed to block 74001-84000
+- Proceed to block 84001-94000
 - Or address remaining corrupted escape sequences (lines 321416, 426786)
 
 ## Key Rules
