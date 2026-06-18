@@ -43,9 +43,18 @@ Correction of `DST.po` in blocks, focusing on spelling, punctuation, grammar, te
   - Fixed corrupted `ўсед/усе` fragments: `ўседаю ў святло` → `ступаю ў святло`, `ўседаеш з бою` → `ўцякаеш з бою`, `УСЕДАЙ` → `УЦЯКАЙ`, `ўседае на зямлі` → `звіваецца на зямлі`
   - Applied boat terminology: `вадалаз/вадалаў` in vessel contexts → `вадаплаў`
   - Various grammar and terminology fixes: `металёваму сябару` → `металёваму сябру`, `морквацукі` → `морква` in carrot contexts, `квэст` → `заданне`, `ваярскі строі` → `ваярскі строй`
+- Lines 84001-99000: corrected
+  - Wathgrithr feminine agreement fixes: `Я стаў бы` → `Я стала б`, `Я паваліў` → `Я паваліла`, `хацеў бы` → `хацела б`, `пераможцам` → `пераможцай`
+  - Applied boat terminology in vessel contexts: `карабель` → `вадаплаў`
+  - Fixed mistranslations/naturalness: `няспяшымі` → `няспячымі`, `зброя ў масцы` → `замаскіраваная зброя`, `Хапай свой сон!` → `Драмай сабе!`/`Спі моцна!`
+  - Fixed grammar/agreement: `агідныя агародніны` → `агідная гародніна`, `Брама ... адкрыты` → `Брама ... адкрыта`, `Велічны сосна` → `Велічная сосна`
+  - Fixed corrupted wording/typos: `усеяла жах` → `усяліла жах`, `Бачy` → `Бачу`, `гаршчкі` → `гаршкі`, `расценне` → `рост`
+  - Fixed carrot/veggie contexts: `морквацук` → `морква` where English is `carrot`; `агародніны звер` → `гароднінны звер`
+  - `{winner}` kept gender-neutral: `Гароднінны чэмпіён {winner} здабыў перамогу`
+  - Fixed PO syntax outside the block: removed stray `.` after `msgid "What a charming figurine."` on line 65255
 
 ### Next Steps
-- Proceed to block 84001-94000
+- Proceed to block 99001-109000
 - Or address remaining corrupted escape sequences (lines 321416, 426786)
 
 ## Key Rules
