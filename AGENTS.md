@@ -59,9 +59,16 @@ Correction of `DST.po` in blocks, focusing on spelling, punctuation, grammar, te
   - Fixed grammar/naturalness in Waxwell lines: `Мусіць...` → natural first-person/impersonal wording, `соленай` → `салёнай`, `пасаноў` → `паслёнавых`, `гадзіннікавы вежа` → `гадзіннікавая вежа`
   - Fixed carrot contexts: `морквацук` → `морква` where English is plain `carrot`
   - Preserved `carrat` contexts as `морквацук`
+- Lines 114001-129000: corrected
+  - Filled empty `msgstr` entries for Waxwell/Webber strings, including vault, WX-78 modules/drones, fumarole tools, mite gland, and shadow assist lines
+  - Applied updated terminology in Webber boat contexts: `вадалаз` → `вадаплаў`
+  - Fixed `pet` terminology: `хатняя жывёла` → `гадаванец`
+  - Fixed plain `carrot` contexts: `морквацук` → `морква`; preserved `Carrat` contexts as `морквацук`
+  - Fixed corrupted `усе ўсе` fragments: `можам усе ўсе ўдаваць` → `можам удаваць`, `малюнак усе ўсе пераблытаны` → `малюнак увесь пераблытаны`, `гэта ўсе ўсе высмоктаць` → `гэта ўсё высмоктаць`
+  - Various grammar/naturalness fixes: `гнілы яйка` → `гнілае яйка`, `Плеўці` → `Плесці`, naturalized several boat patch/bumper lines
 
 ### Next Steps
-- Proceed to block 114001-129000
+- Proceed to block 129001-144000
 - Or address remaining corrupted escape sequences (lines 321416, 426786)
 
 ## Key Rules
