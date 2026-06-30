@@ -66,9 +66,26 @@ Correction of `DST.po` in blocks, focusing on spelling, punctuation, grammar, te
   - Fixed plain `carrot` contexts: `морквацук` → `морква`; preserved `Carrat` contexts as `морквацук`
   - Fixed corrupted `усе ўсе` fragments: `можам усе ўсе ўдаваць` → `можам удаваць`, `малюнак усе ўсе пераблытаны` → `малюнак увесь пераблытаны`, `гэта ўсе ўсе высмоктаць` → `гэта ўсё высмоктаць`
   - Various grammar/naturalness fixes: `гнілы яйка` → `гнілае яйка`, `Плеўці` → `Плесці`, naturalized several boat patch/bumper lines
+- Lines 129001-144000: corrected
+  - Applied updated terminology in Webber/Wendy boat contexts: `вадалаз/вадалаў` → `вадаплаў`
+  - Preserved `Carrat` contexts as `морквацук`; verified plain `carrot` contexts use `морква`
+  - Fixed `pet` terminology/naturalness: `хатні рыбка` → `рыбка-гадаванец`
+  - Fixed corrupted `усе`: `Яно ўсе яшчэ...` → `Яно ўсё яшчэ...`
+  - Various grammar/naturalness fixes: `заблудзіць` → `заблукаць/заблукае`, `жаласьліва` → `жаласна`, neutralized `{winner}` wording
+  - Second-pass semantic/style cleanup: fixed artificial phrasing such as `капаць скарб`, `прапануе сакрэт`, `пабачыць канец`, `быць карыснай`, `бясплодная копія`, `арэнда жыцця`, `Салодкасць без салодкасці`
+  - Corrected context-sensitive `vessel`: food-container line kept as `пасудзіна`, not ship/vessel terminology `судна`
+  - Noted boundary issue: Wendy fumarole fuzzy entries start at line 143989 and continue into the next block
+- Lines 144001-159000: corrected
+  - Completed Wendy fumarole/vault/WX-78 fuzzy entries and removed `#, fuzzy` only after checking current `msgid`
+  - Wickerbottom section started and corrected through the block boundary, including announcement/actionfail/describe lines
+  - Fixed lifeless/barren mistranslations: `бясплоднае/бясплодны` → `нежывое/нежывы` or natural context-specific wording
+  - Fixed Wickerbottom naturalness/grammar: `не паспела быць дастаткова хуткай`, `ў дадзены момант`, `проста бяры свой час`, `мая імунітэт`, `Якар для нашай судна`
+  - Fixed terminology/context: `vessel` → `судна`, `altar` typo `аўтара` → `алтара`, `lifeless` → `нежывы`, `correct place` → `тое месца`
+  - Fixed several typos/corruptions: `замяkkaя` → `замяккая`, `ачуньала` → `ажыла`, `выпарны` → `выдалены пры гатаванні`, `Паважа` → `Паважай`
+  - Verified no fuzzy entries, true empty `msgstr`, or known bad patterns remain in the block
 
 ### Next Steps
-- Proceed to block 129001-144000
+- Proceed to block 159001-174000
 - Or address remaining corrupted escape sequences (lines 321416, 426786)
 
 ## Key Rules
