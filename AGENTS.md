@@ -83,9 +83,45 @@ Correction of `DST.po` in blocks, focusing on spelling, punctuation, grammar, te
   - Fixed terminology/context: `vessel` → `судна`, `altar` typo `аўтара` → `алтара`, `lifeless` → `нежывы`, `correct place` → `тое месца`
   - Fixed several typos/corruptions: `замяkkaя` → `замяккая`, `ачуньала` → `ажыла`, `выпарны` → `выдалены пры гатаванні`, `Паважа` → `Паважай`
   - Verified no fuzzy entries, true empty `msgstr`, or known bad patterns remain in the block
+- Lines 159001-174000: corrected
+  - Continued Wickerbottom `DESCRIBE` section after file line shifts; current block starts at `ACORN`
+  - Reviewed Carnival mini-golf and vault fuzzy strings against current `msgid`; kept `#, fuzzy` markers as requested
+  - Applied updated terminology: `ships` → `караблі`, `vessel` as container → `судзіна`, ship/vault contexts kept distinct
+  - Fixed Wickerbottom feminine agreement: `Сумаваў` → `Сумавала`
+  - Fixed grammar/naturalness issues: `вадалазы` → `караблі`, `сябару` → `сябру`, `кісельных` → `кіслотных`, `плаўка` → `паплаўка`, `Большае гаршчок доўжэй кіпець` → natural wording
+  - Fixed semantic mistranslations: `docile` → `рахманае`, `inside voice` → `цішэй`, `ship`/`boat` contexts, `crops` → `культуры`
+  - Second-pass cleanup: fixed `shell`→`панцыр`, `offering`→`паднашэнне`, `open mind`, `eludes me`, `focal point`, and other artificial phrasing
+  - Verified fuzzy entries are retained; no true empty `msgstr` or PO quote issues remain in the block
+- Lines 174001-189000: corrected
+  - Finished Wickerbottom `DESCRIBE` tail and started Willow section through the block boundary
+  - Reviewed 11 fuzzy entries against current `msgid` and retained all `#, fuzzy` markers
+  - Fixed Wickerbottom naturalness/grammar: `Castorthropy` → `кастартропія`, `сякерамі` ghost line, `начная цень` → `паслён`, `хуткага праглыну` → `хуткага праглынання`, `кампіляваць даследаванні` → natural research wording
+  - Applied terminology/context: `boat` → `вадаплаў`; `Carrat` preserved as `морквацук`; plain `carrot` kept as `морква`
+  - Fixed Willow corrupted `усе ўсе`/`ўсед` fragments: `Месяц усе ўсе` → `Месяц знікае`, `Ліяны ўсе ўсе...` → `Ліяны адкручваюцца...`, `ўседаць` → `ўзірацца`
+  - Fixed Willow grammar/naturalness: `не добра` → `нядобра`, `нікуды асаблівае`, `не слінь мой мяч`, `для будавання`, `для вадаплаў`, `Зламаныя мэблі`, `усеўшыся ў бітву`
+  - Second-pass cleanup: fixed artificial phrasing such as `пратэрмінавана`, `дзіцячых садках`, `пачварнага тыпу`, `робіць мне твар`, `Дазволю каму-небудзь`, `мёртвых рэчаў`
+  - Verified fuzzy entries are retained; no true empty `msgstr`, PO quote issues, or known bad patterns remain in the block
+- Lines 189001-204000: corrected
+  - Finished Willow tail and started Winona section through the block boundary
+  - Reviewed 63 fuzzy entries and retained all `#, fuzzy` markers
+  - Fixed Willow grammar/naturalness: `дзяўчынках-скаўтах`, `Піра`, `даюць да шалу`, `пайшоў у полымі славы`, `тупы як тона цэглы`
+  - Applied terminology/context: `boat` → `вадаплаў`; `Carrat` preserved as `морквацук`; plain `carrot` corrected to `морква`; `knickknacks` → `забаў`
+  - Fixed Winona feminine agreement throughout announcements and describe lines: `сапсаваў`, `вучыўся`, `павінен`, `хацеў`, `мог бы`, `бачыў`, `прайшоў`, `стаяў`, `справіўся`, `разабраўся`, `выцягнуў`, `прамахнуўся`
+  - Fixed corrupted/incorrect wording: `Час усе` → `Час сыходзіць`, `землетрас` → `падземны штуршок`, `вадалёў` → `вадаплаў`, `морквацукаў` → `морквы`, `корmam` → `кормам`
+  - Second-pass cleanup: fixed artificial phrasing such as `праспект` for gold, `не ўцешная тэкстура`, `напалову дрэнна`, `для будавання`, `робіць мне твар`, and unnatural boat/carnival lines
+  - Verified fuzzy entries are retained; no true empty `msgstr` (excluding intentionally empty `msgid`), PO quote issues, or known bad patterns remain in the block
+- Lines 204001-219000: corrected
+  - Finished Winona tail and started Wolfgang through the block boundary
+  - Reviewed 64 fuzzy entries and retained all `#, fuzzy` markers
+  - Fixed Winona corrupted/unnatural strings: `Не ўсе, як працуюць самацветы`, `Амаль без соку`, `Яна ўсе ў лютасці`, `усе ў блытаніну`, `дапаможную руку`, `Зборка прыладаў`
+  - Fixed Winona/WX/YOT tail issues: `Невероятна`, `робатавы`, `не добра`, `скончыць ставіць поле`, `Пачакай, пакуль суддзя не пабачыць цябе`, `Я не зусім усе магію`
+  - Wolfgang grammar/naturalness cleanup: `падынання` → `падымання`, `Набыць лепш` → `Значна лепш`, `свае гародніну` → `сваю гародніну`, `Снадзіва слабая` → `Снадзіва слабае`, `Не ёсць гатовы` → `Яшчэ не гатова`
+  - Applied terminology/context: `boat` → `вадаплаў`; `ship` → `карабель`; `pet` → `гадаванец`; `Carrat` preserved as `морквацук`; plain `carrot` kept as `морква`
+  - Second-pass cleanup: fixed artificial phrases such as `апельсінавая надакучлівасць`, `Тэрмічны, не магутны`, `Ёсць дрэнным газам`, `цыркавы арэнал`, `косцяй твару`, `забіць двух птушак`
+  - Verified fuzzy entries are retained; no true empty `msgstr`, PO quote issues, or known bad patterns remain in the block
 
 ### Next Steps
-- Proceed to block 159001-174000
+- Proceed to block 219001-234000
 - Or address remaining corrupted escape sequences (lines 321416, 426786)
 
 ## Key Rules
@@ -96,3 +132,4 @@ Correction of `DST.po` in blocks, focusing on spelling, punctuation, grammar, te
 - Comparative degree: `лепш за`, `найлепшы з`
 - Wanda: feminine verbs/adjectives (`сказала`, `асцярожнай`, `пабудавала`)
 - `{name}`: avoid gendered verbs, use impersonal constructions
+- Do not remove `#, fuzzy`; correct `msgstr` but keep fuzzy markers unless explicitly told otherwise
