@@ -119,9 +119,32 @@ Correction of `DST.po` in blocks, focusing on spelling, punctuation, grammar, te
   - Applied terminology/context: `boat` → `вадаплаў`; `ship` → `карабель`; `pet` → `гадаванец`; `Carrat` preserved as `морквацук`; plain `carrot` kept as `морква`
   - Second-pass cleanup: fixed artificial phrases such as `апельсінавая надакучлівасць`, `Тэрмічны, не магутны`, `Ёсць дрэнным газам`, `цыркавы арэнал`, `косцяй твару`, `забіць двух птушак`
   - Verified fuzzy entries are retained; no true empty `msgstr`, PO quote issues, or known bad patterns remain in the block
+- Lines 219001-234000: corrected
+  - Finished Wolfgang tail and started Woodie through the block boundary
+  - Reviewed 65 fuzzy entries and retained all `#, fuzzy` markers
+  - Wolfgang cleanup: fixed `не добрая` → `нядобрая`, arm-wrestling phrasing, `злая ежа`, `Малюнак нічога`, `Я ўсе ў блытаніне`, and several agreement issues
+  - Applied terminology/context: `boat` → `вадаплаў`; `pet` → `гадаванец`; `Carrat` preserved as `морквацук`; plain `carrot` kept as `морква`
+  - Fixed Carrat agreement and neutral placeholders: `нагастая морква` → `нагасты морквацук`; `{winner}`/`{name}` kept gender-neutral where needed
+  - Woodie grammar/naturalness cleanup: fixed `хатнюю жывёлу`/`гадунец`, `Магчыма, глядзець`, `начаі`, `не выдала б`, `пакітала`, `папала`, `Глянць`, and other artificial phrasing
+  - Verified fuzzy entries are retained; no true empty `msgstr`, PO quote issues, or known bad patterns remain in the block
+- Lines 234001-249000: corrected
+  - Continued Woodie section through the block boundary and reviewed 73 fuzzy entries; retained all `#, fuzzy` markers
+  - Fixed Woodie grammar/naturalness issues: `не добра` → `нядобра`, `Глянць`, `маё будучыню`, `зацвёрды`, `усекае`, `Добрыя месца`, `Якая блюзнерства`
+  - Fixed semantic mistranslations/artificial phrasing: `карытаноса` → shirt/checkered wording, `прабіў білет` → `прыкончыў`, `пасварыцца` → `звязацца`, `Рубілкі для старых` → `Жавалкі для старых`, `вага ў форме слімака` → `шалі ў форме слімака`
+  - Applied terminology/context: `boat` → `вадаплаў`; `ship` → `карабель`; plain `carrot` kept as `морква`; fixed over-literal boat/garden/trinket/trophy wording
+  - Fixed Woodie character interaction lines for Wanda/Wathgrithr/Waxwell/Webber contexts, including gender agreement and natural threats/banter
+  - Verified no true empty `msgstr`, PO quote issues, or placeholder mismatches remain in the block; `git diff --check -- DST.po AGENTS.md` only reports CRLF warnings
+- Lines 249001-264000: corrected
+  - Finished Woodie tail and started Wormwood section through the block boundary
+  - Reviewed 42 fuzzy entries and retained all `#, fuzzy` markers
+  - Fixed corrupted/extra `усе` fragments in Wormwood lines: boat bumpers, ancient tree lines, chesspiece lines, campfire/firepit phrasing, and Quagmire tail lines
+  - Applied terminology/context: `boat`/`Floaty` → `вадаплаў`; `pet` → `гадаванец`; `Carrat` preserved as `морквацук`; plain `carrot` kept as `морква`
+  - Normalized Wormwood belly-stuff phrasing: `жывотныя рэчы` → `рэчы для жывата` where English is `belly stuff/things`
+  - Fixed grammar/naturalness issues: `Паўноч` → `Поўнач`, `Буль-бульы/Буль-бульаў` → natural plural forms, `Не добра` → `Нядобра`, `карыстае` → `карыстаецца`, and several Woodie tail agreement issues
+  - Verified no true empty `msgstr`, PO quote issues, or placeholder mismatches remain in the block; `git diff --check -- DST.po AGENTS.md` only reports CRLF warnings
 
 ### Next Steps
-- Proceed to block 219001-234000
+- Proceed to block 264001-279000
 - Or address remaining corrupted escape sequences (lines 321416, 426786)
 
 ## Key Rules
