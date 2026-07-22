@@ -142,9 +142,27 @@ Correction of `DST.po` in blocks, focusing on spelling, punctuation, grammar, te
   - Normalized Wormwood belly-stuff phrasing: `жывотныя рэчы` → `рэчы для жывата` where English is `belly stuff/things`
   - Fixed grammar/naturalness issues: `Паўноч` → `Поўнач`, `Буль-бульы/Буль-бульаў` → natural plural forms, `Не добра` → `Нядобра`, `карыстае` → `карыстаецца`, and several Woodie tail agreement issues
   - Verified no true empty `msgstr`, PO quote issues, or placeholder mismatches remain in the block; `git diff --check -- DST.po AGENTS.md` only reports CRLF warnings
+- Lines 264001-279000: corrected
+  - Finished Wormwood tail and started Wortox section through the block boundary
+  - Reviewed the block; no fuzzy entries were present in this range
+  - Fixed corrupted/extra `усе` fragments in Wormwood/Wortox lines, including `усе ўсе`, `усе ўсярэдзіне`, and misplaced `усе` from `all/still/inside` contexts
+  - Applied terminology/context: Wormwood `Floaty` ghost contexts → `лунаючы`/`лунаць`; `Carrat` preserved as `морквацук`; `quest` → `заданне`; `compass` → `кампас`
+  - Normalized Wormwood belly-stuff phrasing and fixed rusisms/typos: `жывотныя рэчы`, `Больше`, `мешок`, `робасябр*`, `плывуч*`
+  - Fixed placeholder neutrality and agreement: `%s зрабіў...` → neutral phrasing, `{winner}` Carrat line kept gender-neutral
+  - Cleaned Wortox grammar/naturalness while preserving playful tone: bee box, Daywalker, chesspiece, hound, lava arena, and seafood lines
+  - Verified no true empty `msgstr`, PO quote issues, placeholder mismatches, or known bad patterns remain in the block; `git diff --check -- DST.po AGENTS.md` only reports CRLF warnings
+- Lines 279001-294000: corrected
+  - Finished Wortox tail and started Wurt section through the block boundary
+  - Reviewed the block; no fuzzy entries were present in this range
+  - Fixed corrupted/extra `усе` fragments in Wortox lines, including drying rack, molehill/chest, moon glass axe, mound, spider eggsack, and whistle contexts
+  - Applied terminology/context: `boat` → `вадаплаў`; `Carrat` preserved as `морквацук`; plain carrot seeds kept as `насенне`, not Carrat terminology
+  - Fixed Wurt grammar/rusisms/typos: `Тоже`, `дзўна`, `застрашна`, `загарачая`, `задоўга`, `направіць`, `лацвей`, `панi`, and `насенны`
+  - Fixed Wurt boat race/boat lines for naturalness and context: floater, boat patch, deploy kits, ancient boat item, cannon lines
+  - Fixed placeholder neutrality and agreement: `%s быў...` → neutral/natural phrasing; `{winner}` kept gender-neutral
+  - Verified no true empty `msgstr`, PO quote issues, placeholder mismatches, or known bad patterns remain in the block; `git diff --check -- DST.po AGENTS.md` only reports CRLF warnings
 
 ### Next Steps
-- Proceed to block 264001-279000
+- Proceed to block 294001-309000
 - Or address remaining corrupted escape sequences (lines 321416, 426786)
 
 ## Key Rules
