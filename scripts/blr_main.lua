@@ -560,7 +560,7 @@ local function belarusianupper(tmp)
 	local letter
 	for i=1,tmp:utf8len() do
 		letter = tmp:utf8sub(i,i)
-		letter = LetterCasesHash.u2l[letter] or letter
+		letter = LetterCasesHash.l2u[letter] or letter
 		res = res..letter
 	end
 	return res
