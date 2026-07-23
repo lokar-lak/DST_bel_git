@@ -72,7 +72,7 @@ local function runTranslatingEngine()
 		local OldDeath = GLOBAL.Networking_DeathAnnouncement
 		local sep_bel = t.PO["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_1"] or " быў забіты "
 		local sep_eng = " was killed by "
-		local end_default = t.PO["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_DEFAULT"] or ""
+		local end_default = t.PO["STRINGS.UI.HUD.DEATH_ANNOUNCEMENT_2_DEFAULT"] or "."
 		GLOBAL.Networking_DeathAnnouncement = function(message, ...)
 			if type(message) ~= "string" then return OldDeath(message, ...) end
 			print("DeathAnnouncement: Original message: " .. message)
@@ -219,6 +219,7 @@ local function rebuildname(str1, action, objectname)
 		if delimetr~=" " and delimetr~="-" then
 			str=str..delimetr
 		elseif #str>0 and (delimetr==" " or delimetr=="-") then
+			neuter=false
 			counter=counter+1
 			local size = str:utf8len()
 			if action=="WALKTO" then --падысці да (каго? чаго?) Родны
